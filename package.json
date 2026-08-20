@@ -3,11 +3,13 @@
   "version": "7.1.0",
   "description": "A TypeScript implementation of Rust's Result and Option objects.",
   "scripts": {
-    "build": "npm run clean && npm run build:ts && npm run build:copy",
+    "build": "pnpm run clean && pnpm run build:ts && pnpm run build:copy",
     "build:ts": "tsc -p tsconfig-cjs.json && tsc -p tsconfig-esm.json",
     "build:copy": "cp package-cjs.json dist/cjs/package.json && cp package-esm.json dist/esm/package.json",
     "clean": "rm -rf dist",
-    "test": "jest",
+    "test": "vitest",
+    "test:watch": "vitest watch",
+    "test:coverage": "vitest --coverage",
     "lint": "prettier src test tsconfig* package.json package-cjs.json package-esm.json --check",
     "format": "prettier src test tsconfig* package.json package-cjs.json package-esm.json --write"
   },
@@ -52,15 +54,14 @@
   "author": "Vultix",
   "license": "MIT",
   "devDependencies": {
-    "@types/jest": "^29.5.3",
+    "@vitest/coverage-v8": "^4.1.11",
     "conditional-type-checks": "^1.0.5",
     "copyfiles": "^2.4.1",
-    "jest": "^29.6.2",
     "prettier": "^3.0.1",
     "rxjs": "^7.8.1",
-    "ts-jest": "^29.1.1",
     "tslib": "^2.3.1",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.11"
   },
   "readme": "README.md"
 }
