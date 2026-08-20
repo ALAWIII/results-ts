@@ -1,6 +1,6 @@
 {
   "name": "@alawiii/results-ts",
-  "version": "7.1.0",
+  "version": "7.1.1",
   "description": "A complete TypeScript implementation of Rust's Result and Option objects.",
   "author": "ALAWIII",
   "homepage": "https://github.com/ALAWIII/results-ts",
