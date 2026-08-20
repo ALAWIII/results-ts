@@ -1,7 +1,18 @@
 {
-  "name": "ts-results-es",
+  "name": "@alawiii/results-ts",
   "version": "7.1.0",
-  "description": "A TypeScript implementation of Rust's Result and Option objects.",
+  "description": "A complete TypeScript implementation of Rust's Result and Option objects.",
+  "author": "ALAWIII",
+  "homepage": "https://github.com/ALAWIII/results-ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ALAWIII/results-ts.git"
+  },
+  "readme": "README.md",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ALAWIII/results-ts/issues"
+  },
   "scripts": {
     "build": "pnpm run clean && pnpm run build:ts && pnpm run build:copy",
     "build:ts": "tsc -p tsconfig-cjs.json && tsc -p tsconfig-esm.json",
@@ -29,10 +40,6 @@
     "src",
     "dist"
   ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/lune-climate/ts-results-es.git"
-  },
   "keywords": [
     "Rust",
     "Result",
@@ -51,8 +58,6 @@
     "Maybe",
     "Union"
   ],
-  "author": "Vultix",
-  "license": "MIT",
   "devDependencies": {
     "@vitest/coverage-v8": "^4.1.11",
     "conditional-type-checks": "^1.0.5",
@@ -62,6 +67,5 @@
     "tslib": "^2.3.1",
     "typescript": "^5.8.3",
     "vitest": "^4.1.11"
-  },
-  "readme": "README.md"
+  }
 }
