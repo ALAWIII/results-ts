@@ -124,3 +124,6 @@ test('Ok.isOkAnd', () => {
     expect(Ok(1).isOkAnd((v) => v > 0)).toBe(true);
     expect(Ok(0).isOkAnd((v) => v > 1)).toBe(false);
 });
+test('Ok.isErrAnd', () => {
+    expect(Ok(1).isErrAnd()).toBe(false);
+});

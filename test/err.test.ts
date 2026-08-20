@@ -143,3 +143,7 @@ test('stack trace', () => {
 test('Err.isOkAnd', () => {
     expect(Err('Failure ').isOkAnd()).toBe(false);
 });
+test('Err.isErrAnd', () => {
+    expect(Err('Failure').isErrAnd((e) => e === 'Failure')).toBe(true);
+    expect(Err('Failure').isErrAnd((e) => e === 'Success')).toBe(false);
+});

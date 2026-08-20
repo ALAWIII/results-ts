@@ -22,6 +22,10 @@ interface BaseResult<T, E> extends Iterable<T> {
     isErr(): this is ErrImpl<E>;
 
     /**
+     * Returns true if the result is Err and the value inside of it matches a predicate
+     */
+    isErrAnd(f: (e: E) => boolean): boolean;
+    /**
      * Returns the contained `Ok` value, if exists.  Throws an error if not.
      *
      * The thrown error's
@@ -296,28 +300,8 @@ export class ErrImpl<E> implements BaseResult<never, E> {
      * ```
      */
     static readonly EMPTY = new ErrImpl<void>(undefined);
-
-    isOk(): this is OkImpl<never> {
-        return false;
-    }
-    isOkAnd(): boolean {
-        return false;
-    }
-    isErr(): this is ErrImpl<E> {
-        return true;
-    }
-
-    readonly error!: E;
-
     private readonly _stack!: string;
-
-    [Symbol.iterator](): Iterator<never, never, any> {
-        return {
-            next(): IteratorResult<never, never> {
-                return { done: true, value: undefined! };
-            },
-        };
-    }
+    readonly error!: E;
 
     constructor(val: E) {
         if (!(this instanceof ErrImpl)) {
@@ -332,6 +316,26 @@ export class ErrImpl<E> implements BaseResult<never, E> {
         }
 
         this._stack = stackLines.join('\n');
+    }
+    isOk(): this is OkImpl<never> {
+        return false;
+    }
+    isOkAnd(): boolean {
+        return false;
+    }
+    isErr(): this is ErrImpl<E> {
+        return true;
+    }
+    isErrAnd(f: (e: E) => boolean): boolean {
+        return f(this.error);
+    }
+
+    [Symbol.iterator](): Iterator<never, never, any> {
+        return {
+            next(): IteratorResult<never, never> {
+                return { done: true, value: undefined! };
+            },
+        };
     }
 
     unwrapOr<T2>(val: T2): T2 {
@@ -430,6 +434,15 @@ export class OkImpl<T> implements BaseResult<T, never> {
      * ```
      */
     static readonly EMPTY = new OkImpl<void>(undefined);
+    readonly value!: T;
+
+    constructor(val: T) {
+        if (!(this instanceof OkImpl)) {
+            return new OkImpl(val);
+        }
+
+        this.value = val;
+    }
 
     isOk(): this is OkImpl<T> {
         return true;
@@ -440,19 +453,11 @@ export class OkImpl<T> implements BaseResult<T, never> {
     isErr(): this is ErrImpl<never> {
         return false;
     }
-
-    readonly value!: T;
-
+    isErrAnd(): boolean {
+        return false;
+    }
     [Symbol.iterator](): Iterator<T> {
         return [this.value][Symbol.iterator]();
-    }
-
-    constructor(val: T) {
-        if (!(this instanceof OkImpl)) {
-            return new OkImpl(val);
-        }
-
-        this.value = val;
     }
 
     unwrapOr(_val: unknown): T {

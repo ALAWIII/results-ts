@@ -527,3 +527,9 @@ test('Result.isOkAnd', () => {
     expect(errResult.isOkAnd((v) => v > 1)).toBe(false);
     expect(okResult.isOkAnd((v) => v > 1)).toBe(true);
 });
+test('Result.isErrAnd', () => {
+    const errResult = Err('Failure') as Result<number, string>;
+    const okResult = Ok(2) as Result<number, string>;
+    expect(errResult.isErrAnd((v) => v === 'Failure')).toBe(true);
+    expect(okResult.isErrAnd((v) => v === 'Failure')).toBe(false);
+});
