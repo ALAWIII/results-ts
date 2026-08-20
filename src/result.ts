@@ -276,24 +276,23 @@ interface BaseResult<T, E> extends Iterable<T> {
      *  Converts from `Result<T, E>` to `Option<T>`, discarding the error if any
      *
      *  Similar to rust's `ok` method
-     * # Examples:
      *
-     * ```typescript
+     * @example
+     *
      * Ok(5).toOption() // evaluates to Some(5)
      * Err('your error').toOption() // evaluates to None
-     * ```
      */
     toOption(): Option<T>;
     /**
      *  Converts from `Result<T, E>` to `Option<E>`, discarding the value if any
      *
      *  Similar to rust's `err` method
-     * # Examples:
      *
-     * ```typescript
+     * @example
+     *
      * Err('your error').toError() // evaluates to Some('your error')
      * Ok(5).toError() // evaluates to None
-     * ```
+     *
      */
     toError(): Option<E>;
     /**
