@@ -1,31 +1,31 @@
 import { assert } from 'conditional-type-checks';
-import { Err, Ok, Result } from '../src/index.js';
+import { Err, ErrImpl, Ok, Result } from '../src/index.js';
 import { eq, expect_never } from './util.js';
 
 test('Constructable & Callable', () => {
-    const a = new Err(3);
-    expect(a).toBeInstanceOf(Err);
-    eq<typeof a, Err<number>>(true);
+    const a = Err(3);
+    expect(a).toBeInstanceOf(ErrImpl);
+    eq<typeof a, ErrImpl<number>>(true);
 
     const b = Err(3);
-    expect(b).toBeInstanceOf(Err);
-    eq<typeof b, Err<number>>(true);
+    expect(b).toBeInstanceOf(ErrImpl);
+    eq<typeof b, ErrImpl<number>>(true);
 
     function mapper<T>(fn: (val: string) => T): T {
         return fn('hi');
     }
     const mapped = mapper(Err);
-    expect(mapped).toMatchResult(new Err('hi'));
+    expect(mapped).toMatchResult(Err('hi'));
 
     // TODO: This should work!
-    // eq<typeof mapped, Err<string>>(true);
+    // eq<typeof mapped, ErrImpl<string>>(true);
 
-    // @ts-expect-error Err<string> is not assignable to Err<number>
-    mapper<Err<number>>(Err);
+    // @ts-expect-error ErrImpl<string> is not assignable to ErrImpl<number>
+    mapper<ErrImpl<number>>(Err);
 });
 
 test('ok, err, and val', () => {
-    const err = new Err(32);
+    const err = Err(32);
     expect(err.isErr()).toBe(true);
 
     expect(err.isOk()).toBe(false);
@@ -35,9 +35,9 @@ test('ok, err, and val', () => {
 });
 
 test('static EMPTY', () => {
-    expect(Err.EMPTY).toBeInstanceOf(Err);
-    expect(Err.EMPTY.error).toBe(undefined);
-    eq<typeof Err.EMPTY, Err<void>>(true);
+    expect(ErrImpl.EMPTY).toBeInstanceOf(ErrImpl);
+    expect(ErrImpl.EMPTY.error).toBe(undefined);
+    eq<typeof ErrImpl.EMPTY, ErrImpl<void>>(true);
 });
 
 test('unwrapOr', () => {
@@ -50,7 +50,7 @@ test('expect', () => {
     try {
         const err = Err(true).expect('should fail!');
         expect_never(err, true);
-        throw new Error('Unreachable');
+        throw Error('Unreachable');
     } catch (e) {
         expect((e as Error).message).toMatch('should fail!');
         expect((e as Error).cause).toEqual(true);
@@ -67,7 +67,7 @@ test('unwrap', () => {
     try {
         const err = Err({ message: 'bad error' }).unwrap();
         expect_never(err, true);
-        throw new Error('Unreachable');
+        throw Error('Unreachable');
     } catch (e) {
         expect((e as Error).message).toMatch('{"message":"bad error"}');
         expect((e as Error).cause).toEqual({ message: 'bad error' });
@@ -83,11 +83,11 @@ test('unwrapErr', () => {
 test('map', () => {
     const err = Err(3).map((x: any) => Symbol());
     expect(err).toMatchResult(Err(3));
-    eq<typeof err, Err<number>>(true);
+    eq<typeof err, ErrImpl<number>>(true);
 });
 
 test('andThen', () => {
-    const err = new Err('Err').andThen(() => new Ok(3));
+    const err = Err('Err').andThen(() => Ok(3));
     expect(err).toMatchResult(Err('Err'));
     eq<typeof err, Result<number, unknown>>(true);
 });
@@ -95,7 +95,7 @@ test('andThen', () => {
 test('mapErr', () => {
     const err = Err('32').mapErr((x) => +x);
     expect(err).toMatchResult(Err(32));
-    eq<typeof err, Err<number>>(true);
+    eq<typeof err, ErrImpl<number>>(true);
 });
 
 test('mapOr / mapOrElse', () => {
@@ -111,7 +111,7 @@ test('mapOr / mapOrElse', () => {
 test('iterable', () => {
     for (const item of Err([123])) {
         expect_never(item, true);
-        throw new Error('Unreachable, Err@@iterator should emit no value and return');
+        throw Error('Unreachable, Err@@iterator should emit no value and return');
     }
 });
 
@@ -121,11 +121,11 @@ test('to string', () => {
 });
 
 test('stack trace', () => {
-    function first(): Err<number> {
+    function first(): ErrImpl<number> {
         return second();
     }
 
-    function second(): Err<number> {
+    function second(): ErrImpl<number> {
         return Err(1);
     }
 
@@ -136,6 +136,6 @@ test('stack trace', () => {
     expect(err.stack).toMatch(/Err\(1\)/);
     expect(err.stack).not.toMatch(/ErrImpl/);
 
-    const err2 = Err(new Error('inner error'));
+    const err2 = Err(Error('inner error'));
     expect(err2.stack).toMatch(/Err\(Error: inner error\)/);
 });

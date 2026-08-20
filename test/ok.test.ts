@@ -1,32 +1,32 @@
 import { assert } from 'conditional-type-checks';
-import { Err, Ok, Result } from '../src/index.js';
+import { Err, Ok, OkImpl, Result } from '../src/index.js';
 import { eq, expect_never, expect_string } from './util.js';
 
 test('Constructable & Callable', () => {
-    const a = new Ok(3);
-    expect(a).toBeInstanceOf(Ok);
-    eq<typeof a, Ok<number>>(true);
+    const a = Ok(3);
+    expect(a).toBeInstanceOf(OkImpl);
+    eq<typeof a, OkImpl<number>>(true);
 
     const b = Ok(3);
-    expect(b).toBeInstanceOf(Ok);
-    eq<typeof b, Ok<number>>(true);
+    expect(b).toBeInstanceOf(OkImpl);
+    eq<typeof b, OkImpl<number>>(true);
 
     function mapper<T>(fn: (val: string) => T): T {
         return fn('hi');
     }
 
     const mapped = mapper(Ok);
-    expect(mapped).toMatchResult(new Ok('hi'));
+    expect(mapped).toMatchResult(Ok('hi'));
 
     // TODO: This should work!
-    // eq<typeof mapped, Ok<string>>(true);
+    // eq<typeof mapped, OkImpl<string>>(true);
 
-    // @ts-expect-error Ok<string> is not assignable to Ok<number>
-    mapper<Ok<number>>(Ok);
+    // @ts-expect-error OkImpl<string> is not assignable to OkImpl<number>
+    mapper<OkImpl<number>>(Ok);
 });
 
 test('ok, err, and val', () => {
-    const err = new Ok(32);
+    const err = Ok(32);
     expect(err.isErr()).toBe(false);
 
     expect(err.isOk()).toBe(true);
@@ -36,9 +36,9 @@ test('ok, err, and val', () => {
 });
 
 test('static EMPTY', () => {
-    expect(Ok.EMPTY).toBeInstanceOf(Ok);
-    expect(Ok.EMPTY.value).toBe(undefined);
-    eq<typeof Ok.EMPTY, Ok<void>>(true);
+    expect(OkImpl.EMPTY).toBeInstanceOf(OkImpl);
+    expect(OkImpl.EMPTY.value).toBe(undefined);
+    eq<typeof OkImpl.EMPTY, OkImpl<void>>(true);
 });
 
 test('unwrapOr', () => {
@@ -80,15 +80,15 @@ test('unwrapErr', () => {
 test('map', () => {
     const mapped = Ok(3).map((x) => x.toString(10));
     expect(mapped).toMatchResult(Ok('3'));
-    eq<typeof mapped, Ok<string>>(true);
+    eq<typeof mapped, OkImpl<string>>(true);
 });
 
 test('andThen', () => {
-    const ok = new Ok('Ok').andThen(() => new Ok(3));
+    const ok = Ok('Ok').andThen(() => Ok(3));
     expect(ok).toMatchResult(Ok(3));
     eq<typeof ok, Result<number, unknown>>(true);
 
-    const err = new Ok('Ok').andThen(() => new Err(false));
+    const err = Ok('Ok').andThen(() => Err(false));
     expect(err).toMatchResult(Err(false));
     eq<typeof err, Result<unknown, boolean>>(true);
 });
@@ -96,7 +96,7 @@ test('andThen', () => {
 test('mapErr', () => {
     const ok = Ok('32').mapErr((x: any) => +x);
     expect(ok).toMatchResult(Ok('32'));
-    eq<typeof ok, Ok<string>>(true);
+    eq<typeof ok, OkImpl<string>>(true);
 });
 
 test('mapOr / mapOrElse', () => {

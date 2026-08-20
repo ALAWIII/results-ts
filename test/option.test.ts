@@ -1,8 +1,8 @@
-import { Err, None, Ok, Option, OptionSomeType, Result, Some } from '../src/index.js';
+import { Err, None, Ok, Option, OptionSomeType, Result, Some, SomeImpl } from '../src/index.js';
 import { eq, notSupposedToBeCalled } from './util.js';
 
 const someString = Some('foo');
-const someNum = new Some(10);
+const someNum = Some(10);
 
 test('basic invariants', () => {
     expect(someString.isSome()).toBeTruthy();
@@ -25,7 +25,7 @@ test('basic invariants', () => {
 test('type narrowing', () => {
     const opt = None as Option<string>;
     if (opt.isSome()) {
-        eq<typeof opt, Some<string>>(true);
+        eq<typeof opt, SomeImpl<string>>(true);
         eq<typeof opt.value, string>(true);
     } else {
         eq<typeof opt, None>(true);
@@ -34,25 +34,25 @@ test('type narrowing', () => {
     if (!opt.isSome()) {
         eq<typeof opt, None>(true);
     } else {
-        eq<typeof opt, Some<string>>(true);
+        eq<typeof opt, SomeImpl<string>>(true);
         eq<typeof opt.value, string>(true);
     }
 
     if (opt.isNone()) {
         eq<typeof opt, None>(true);
     } else {
-        eq<typeof opt, Some<string>>(true);
+        eq<typeof opt, SomeImpl<string>>(true);
         eq<typeof opt.value, string>(true);
     }
 
     if (!opt.isNone()) {
-        eq<typeof opt, Some<string>>(true);
+        eq<typeof opt, SomeImpl<string>>(true);
         eq<typeof opt.value, string>(true);
     } else {
         eq<typeof opt, None>(true);
     }
 
-    expect(someString).toBeInstanceOf(Some);
+    expect(someString).toBeInstanceOf(SomeImpl);
     expect(None).toEqual(None);
 });
 
@@ -206,7 +206,7 @@ test('Option.any', () => {
 
 test('Type Helpers', () => {
     eq<OptionSomeType<Option<string>>, string>(true);
-    eq<OptionSomeType<Some<string>>, string>(true);
+    eq<OptionSomeType<SomeImpl<string>>, string>(true);
     eq<OptionSomeType<None>, never>(true);
 });
 
