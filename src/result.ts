@@ -276,9 +276,26 @@ interface BaseResult<T, E> extends Iterable<T> {
      *  Converts from `Result<T, E>` to `Option<T>`, discarding the error if any
      *
      *  Similar to rust's `ok` method
+     * # Examples:
+     *
+     * ```typescript
+     * Ok(5).toOption() // evaluates to Some(5)
+     * Err('your error').toOption() // evaluates to None
+     * ```
      */
     toOption(): Option<T>;
-
+    /**
+     *  Converts from `Result<T, E>` to `Option<E>`, discarding the value if any
+     *
+     *  Similar to rust's `err` method
+     * # Examples:
+     *
+     * ```typescript
+     * Err('your error').toError() // evaluates to Some('your error')
+     * Ok(5).toError() // evaluates to None
+     * ```
+     */
+    toError(): Option<E>;
     /**
      * Creates an `AsyncResult` based on this `Result`.
      *
@@ -401,7 +418,9 @@ export class ErrImpl<E> implements BaseResult<never, E> {
     toOption(): Option<never> {
         return None;
     }
-
+    toError(): Option<E> {
+        return Some(this.error);
+    }
     toString(): string {
         return `Err(${toString(this.error)})`;
     }
@@ -518,7 +537,9 @@ export class OkImpl<T> implements BaseResult<T, never> {
     toOption(): Option<T> {
         return Some(this.value);
     }
-
+    toError(): Option<never> {
+        return None;
+    }
     toString(): string {
         return `Ok(${toString(this.value)})`;
     }

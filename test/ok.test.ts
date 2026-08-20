@@ -1,5 +1,5 @@
 import { assert } from 'conditional-type-checks';
-import { Err, Ok, OkImpl, Result } from '../src/index.js';
+import { Err, None, Ok, OkImpl, Result, Some } from '../src/index.js';
 import { eq, expect_never, expect_string } from './util.js';
 
 test('Constructable & Callable', () => {
@@ -126,4 +126,9 @@ test('Ok.isOkAnd', () => {
 });
 test('Ok.isErrAnd', () => {
     expect(Ok(1).isErrAnd()).toBe(false);
+});
+
+test('Ok.toError', () => {
+    expect(Ok(55).toError()).toBe(None);
+    expect(Ok(55).toError()).not.toEqual(Some(55));
 });
