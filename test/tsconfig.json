@@ -7,8 +7,8 @@
     "declarationMap": false,
     "module": "commonjs",
     "downlevelIteration": true,
-    "importHelpers": true
+    "importHelpers": true,
   },
-  "include": ["../src/**/*.ts", "./**/*.ts"],
-  "exclude": []
+  "include": ["../src/**/*.ts", "./**/*.ts", "../vitest.d.ts"],
+  "exclude": [],
 }
