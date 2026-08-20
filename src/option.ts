@@ -1,6 +1,6 @@
 import { AsyncOption } from './asyncoption.js';
 import { toString } from './utils.js';
-import { Result, Ok, Err } from './result.js';
+import { Result, Ok, Err, ErrImpl, OkImpl } from './result.js';
 
 interface BaseOption<T> extends Iterable<T> {
     /** `true` when the Option is Some */
@@ -186,7 +186,7 @@ class NoneImpl implements BaseOption<never> {
         return this;
     }
 
-    toResult<E>(error: E): Err<E> {
+    toResult<E>(error: E): ErrImpl<E> {
         return Err(error);
     }
 
@@ -207,7 +207,7 @@ Object.freeze(None);
 /**
  * Contains the success value
  */
-class SomeImpl<T> implements BaseOption<T> {
+export class SomeImpl<T> implements BaseOption<T> {
     /**
      * An empty Some
      *
@@ -256,7 +256,7 @@ class SomeImpl<T> implements BaseOption<T> {
         return this.value;
     }
 
-    map<T2>(mapper: (val: T) => T2): Some<T2> {
+    map<T2>(mapper: (val: T) => T2): SomeImpl<T2> {
         return Some(mapper(this.value));
     }
 
@@ -280,7 +280,7 @@ class SomeImpl<T> implements BaseOption<T> {
         return mapper(this.value);
     }
 
-    toResult<E>(error: E): Ok<T> {
+    toResult<E>(error: E): OkImpl<T> {
         return Ok(this.value);
     }
 
@@ -294,12 +294,13 @@ class SomeImpl<T> implements BaseOption<T> {
 }
 
 // This allows Some to be callable - possible because of the es5 compilation target
-export const Some = SomeImpl as typeof SomeImpl & (<T>(val: T) => SomeImpl<T>);
-export type Some<T> = SomeImpl<T>;
 
-export type Option<T> = Some<T> | None;
+export function Some<E>(val: E): SomeImpl<E> {
+    return new SomeImpl(val);
+}
+export type Option<T> = SomeImpl<T> | None;
 
-export type OptionSomeType<T extends Option<any>> = T extends Some<infer U> ? U : never;
+export type OptionSomeType<T extends Option<any>> = T extends SomeImpl<infer U> ? U : never;
 
 export type OptionSomeTypes<T extends Option<any>[]> = {
     [key in keyof T]: T[key] extends Option<any> ? OptionSomeType<T[key]> : never;
@@ -378,7 +379,7 @@ export namespace Option {
         // short-circuits
         for (const option of options) {
             if (option.isSome()) {
-                return option as Some<OptionSomeTypes<T>[number]>;
+                return option as SomeImpl<OptionSomeTypes<T>[number]>;
             } else {
                 continue;
             }
@@ -389,12 +390,12 @@ export namespace Option {
     }
 
     export function isOption<T = any>(value: unknown): value is Option<T> {
-        return value instanceof Some || value === None;
+        return value instanceof SomeImpl || value === None;
     }
 
     /**
      * Converts a nullable value to an {@link Option}.
-     * Returns {@link None} if the value is `null`, otherwise returns {@link Some} containing the value.
+     * Returns {@link None} if the value is `null`, otherwise returns {@link SomeImpl} containing the value.
      *
      * See also {@link fromOptional} for `T | undefined` and {@link fromNullish} for `T | null | undefined`.
      *
@@ -413,7 +414,7 @@ export namespace Option {
 
     /**
      * Converts an optional value to an {@link Option}.
-     * Returns {@link None} if the value is `undefined`, otherwise returns {@link Some} containing the value.
+     * Returns {@link None} if the value is `undefined`, otherwise returns {@link SomeImpl} containing the value.
      *
      * See also {@link fromNullable} for `T | null` and {@link fromNullish} for `T | null | undefined`.
      *
@@ -432,7 +433,7 @@ export namespace Option {
 
     /**
      * Converts a nullish value to an {@link Option}.
-     * Returns {@link None} if the value is `null` or `undefined`, otherwise returns {@link Some} containing the value.
+     * Returns {@link None} if the value is `null` or `undefined`, otherwise returns {@link SomeImpl} containing the value.
      *
      * Prefer {@link fromNullable} for `T | null` or {@link fromOptional} for `T | undefined`.
      * Use this method only when the value is already both nullable and optional and you genuinely
