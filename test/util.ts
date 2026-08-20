@@ -8,18 +8,6 @@ export function expect_never<T>(x: T, y: IsNever<T>) {}
 
 export function eq<A, B>(x: IsExact<A, B>) {}
 
-declare global {
-    namespace jest {
-        interface Matchers<R> {
-            toMatchResult(result: Result<any, any>): R;
-
-            toMatchObsResult(result: Result<any, any>): R;
-
-            toMatchObs(value: any): R;
-        }
-    }
-}
-
 expect.extend({
     toMatchResult(received: Result<any, any>, result: Result<any, any>) {
         let pass = true;
