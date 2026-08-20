@@ -1,6 +1,6 @@
 import { MonoTypeOperatorFunction, Observable, ObservableInput, of, OperatorFunction } from 'rxjs';
 import { filter, map, mergeMap, switchMap, tap } from 'rxjs/operators';
-import { Err, Ok, Result } from '../index.js';
+import { ErrImpl, Ok, OkImpl, Result } from '../index.js';
 
 /**
  * Allows you to do the same actions as the normal rxjs `map` operator on a stream of Result objects.
@@ -157,7 +157,7 @@ export function resultSwitchMap<T, E, T2, E2>(
                 if (Result.isResult(result)) {
                     return result;
                 } else {
-                    return new Ok(result);
+                    return Ok(result);
                 }
             }),
         );
@@ -228,7 +228,7 @@ export function resultMergeMap<T, E, T2, E2>(
                 if (Result.isResult(result)) {
                     return result;
                 } else {
-                    return new Ok(result);
+                    return Ok(result);
                 }
             }),
         );
@@ -260,7 +260,7 @@ export function resultMergeMap<T, E, T2, E2>(
 export function filterResultOk<T, E>(): OperatorFunction<Result<T, E>, T> {
     return (source) => {
         return source.pipe(
-            filter((result): result is Ok<T> => result.isOk()),
+            filter((result): result is OkImpl<T> => result.isOk()),
             map((result) => result.value),
         );
     };
@@ -291,7 +291,7 @@ export function filterResultOk<T, E>(): OperatorFunction<Result<T, E>, T> {
 export function filterResultErr<T, E>(): OperatorFunction<Result<T, E>, E> {
     return (source) => {
         return source.pipe(
-            filter((result): result is Err<E> => result.isErr()),
+            filter((result): result is ErrImpl<E> => result.isErr()),
             map((result) => result.error),
         );
     };

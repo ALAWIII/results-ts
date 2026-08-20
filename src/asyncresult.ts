@@ -1,5 +1,5 @@
 import { AsyncOption } from './asyncoption.js';
-import { Err, Result, Ok } from './result.js';
+import { Err, Result, Ok, ErrImpl } from './result.js';
 
 /**
  * An async-aware `Result` counterpart.
@@ -53,7 +53,7 @@ export class AsyncResult<T, E> {
                 // SAFETY: What we're returning here is Err<E>. That doesn't sit well with
                 // TypeScript for some reason, let's explicitly expand the type to what this
                 // function is supposed to return.
-                return result as Err<E | E2>;
+                return result as ErrImpl<E | E2>;
             }
             const mapped = mapper(result.value);
             return mapped instanceof AsyncResult ? mapped.promise : mapped;
