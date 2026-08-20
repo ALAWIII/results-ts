@@ -533,3 +533,23 @@ test('Result.isErrAnd', () => {
     expect(errResult.isErrAnd((v) => v === 'Failure')).toBe(true);
     expect(okResult.isErrAnd((v) => v === 'Failure')).toBe(false);
 });
+
+test('Result.inspect', () => {
+    const okResult = Ok(5) as Result<number, string>;
+    let okSideEffect: number | undefined;
+    const errResult = Err('x') as Result<number, string>;
+    let errSideEffect: string | undefined;
+    expect(
+        okResult.inspect((v) => {
+            okSideEffect = v + 1;
+        }),
+    ).toEqual(okResult);
+    expect(
+        errResult.inspect((v) => {
+            errSideEffect = `${v}`;
+        }),
+    ).toEqual(errResult);
+
+    expect(okSideEffect).toEqual(6);
+    expect(errSideEffect).toBe(undefined);
+});

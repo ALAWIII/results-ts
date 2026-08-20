@@ -301,6 +301,8 @@ interface BaseResult<T, E> extends Iterable<T> {
      * Useful when you need to compose results with asynchronous code.
      */
     toAsyncResult(): AsyncResult<T, E>;
+
+    inspect(f: (v: T) => void): Result<T, E>;
 }
 
 /**
@@ -431,6 +433,9 @@ export class ErrImpl<E> implements BaseResult<never, E> {
     toAsyncResult(): AsyncResult<never, E> {
         return new AsyncResult(this);
     }
+    inspect(): ErrImpl<E> {
+        return this;
+    }
 }
 
 // This allows Err to be callable - possible because of the es5 compilation target
@@ -545,6 +550,10 @@ export class OkImpl<T> implements BaseResult<T, never> {
 
     toAsyncResult(): AsyncResult<T, never> {
         return new AsyncResult(this);
+    }
+    inspect(f: (v: T) => void): Result<T, never> {
+        f(this.value);
+        return this;
     }
 }
 

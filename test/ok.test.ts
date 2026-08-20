@@ -132,3 +132,18 @@ test('Ok.toError', () => {
     expect(Ok(55).toError()).toBe(None);
     expect(Ok(55).toError()).not.toEqual(Some(55));
 });
+
+test('Ok.inspect', () => {
+    const ok = Ok(55);
+    let called = false;
+    let capturedValue = 0;
+
+    const result = ok.inspect((v) => {
+        called = true;
+        capturedValue = v;
+    });
+
+    expect(result).toBe(ok);
+    expect(called).toBe(true);
+    expect(capturedValue).toBe(55);
+});

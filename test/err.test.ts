@@ -152,3 +152,9 @@ test('Err.toError', () => {
     expect(Err(55).toError()).toEqual(Some(55));
     expect(Err(55).toError()).not.toBe(None);
 });
+
+test('Err.inspect', () => {
+    const err = Err(55);
+    expect(err.inspect()).toBe(err); // Same instance
+    expect(err.inspect()).toEqual(err); // Same value
+});
