@@ -139,3 +139,7 @@ test('stack trace', () => {
     const err2 = Err(Error('inner error'));
     expect(err2.stack).toMatch(/Err\(Error: inner error\)/);
 });
+
+test('Err.isOkAnd', () => {
+    expect(Err('Failure ').isOkAnd()).toBe(false);
+});

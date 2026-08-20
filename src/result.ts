@@ -14,6 +14,10 @@ interface BaseResult<T, E> extends Iterable<T> {
     /** `true` when the result is Ok */
     isOk(): this is OkImpl<T>;
 
+    /**
+     * Returns true if the result is Ok and the value inside of it matches a predicate
+     */
+    isOkAnd(f: (v: T) => boolean): boolean;
     /** `true` when the result is Err */
     isErr(): this is ErrImpl<E>;
 
@@ -296,7 +300,9 @@ export class ErrImpl<E> implements BaseResult<never, E> {
     isOk(): this is OkImpl<never> {
         return false;
     }
-
+    isOkAnd(): boolean {
+        return false;
+    }
     isErr(): this is ErrImpl<E> {
         return true;
     }
@@ -428,7 +434,9 @@ export class OkImpl<T> implements BaseResult<T, never> {
     isOk(): this is OkImpl<T> {
         return true;
     }
-
+    isOkAnd(f: (v: T) => boolean): boolean {
+        return f(this.value);
+    }
     isErr(): this is ErrImpl<never> {
         return false;
     }

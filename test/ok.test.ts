@@ -119,3 +119,8 @@ test('to string', () => {
     expect(`${Ok(1)}`).toEqual('Ok(1)');
     expect(`${Ok({ name: 'George' })}`).toEqual('Ok({"name":"George"})');
 });
+
+test('Ok.isOkAnd', () => {
+    expect(Ok(1).isOkAnd((v) => v > 0)).toBe(true);
+    expect(Ok(0).isOkAnd((v) => v > 1)).toBe(false);
+});

@@ -520,3 +520,10 @@ test('andThen/orElse chaining regression', () => {
     expect(test2).toEqual(Ok({ name: 'T3' }));
     eq<typeof test2, OkImpl<T3> | ErrImpl<E3> | ErrImpl<E2 | E3>>(true);
 });
+
+test('Result.isOkAnd', () => {
+    const errResult = Err('Failure') as Result<number, string>;
+    const okResult = Ok(2) as Result<number, string>;
+    expect(errResult.isOkAnd((v) => v > 1)).toBe(false);
+    expect(okResult.isOkAnd((v) => v > 1)).toBe(true);
+});
