@@ -173,6 +173,24 @@ interface BaseResult<T, E> extends Iterable<T> {
     andThen<T2, E2>(mapper: (val: T) => Result<T2, E2>): Result<T2, E | E2>;
 
     /**
+     * Returns `res` if the result is `Ok`, otherwise returns the `Err` value of self.
+     *
+     * @example
+     * ```typescript
+     * const err = Err(3);
+     * const errAndErr= err.and(Err(8));
+     * const errAndOk= err.and(Ok(9))
+     * console.log(errAndOk,errAndErr) // prints Err(3),Err(3)
+     * //===========
+     * const ok = Ok(5);
+     * const okAndErr= ok.and(Err(8));
+     * console.log(okAndErr) // prints Err(8)
+     * const okAndOk = ok.and(Ok(9));
+     * console.log(okAndOk) // prints Ok(9)
+     * ```
+     */
+    and<U, E2 = E>(res: Result<U, E | E2>): Result<U, E | E2>;
+    /**
      * Maps a `Result<T, E>` to `Result<U, E>` by applying a function to a contained `Ok` value,
      * leaving an `Err` value untouched.
      *
@@ -400,6 +418,9 @@ export class ErrImpl<E> implements BaseResult<never, E> {
     andThen<T2, E2>(_op?: (val: never) => Result<T2, E2>): Result<T2, E | E2> {
         return this;
     }
+    and<U, E2 = E>(_res?: Result<U, E | E2>): Result<U, E> {
+        return this;
+    }
     mapErr<E2>(mapper: (val: E) => E2): Result<never, E2> {
         return Err(mapper(this.error));
     }
@@ -516,7 +537,9 @@ export class OkImpl<T> implements BaseResult<T, never> {
     andThen<T2, E2>(mapper: (val: T) => Result<T2, E2>): Result<T2, E2> {
         return mapper(this.value);
     }
-
+    and<U, E2>(res: Result<U, E2>): Result<U, E2> {
+        return res;
+    }
     mapErr<F>(_mapper?: (val: never) => F): Result<T, F> {
         return this;
     }

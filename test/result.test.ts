@@ -572,3 +572,10 @@ test('Result.inspectErr', () => {
     expect(errSideEffect).toBe('x');
     expect(okSideEffect).toEqual(undefined);
 });
+
+test('Result.and and ignores the provided if the result was Err', () => {
+    const errResult = Err(3) as Result<number, number>;
+    expect(errResult.and(Ok('00'))).toMatchResult(Err(3));
+    const okResult = Ok(3) as Result<number, number>;
+    expect(okResult.and(Ok('00'))).toMatchResult(Ok('00'));
+});

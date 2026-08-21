@@ -152,3 +152,8 @@ test('Ok.inspectErr', () => {
     expect(err.inspectErr()).toBe(err); // Same instance
     expect(err.inspectErr()).toEqual(err); // Same value
 });
+test('Ok.and', () => {
+    const ok = Ok(2);
+    expect(ok.and(Ok(3)).unwrap()).toBe(3);
+    expect(ok.and(Err(4)).err().unwrap()).toBe(4);
+});

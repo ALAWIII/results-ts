@@ -152,3 +152,10 @@ test('Err.inspectErr', () => {
     expect(called).toBe(true);
     expect(capturedValue).toBe(55);
 });
+
+test('Err.and', () => {
+    const err = Err(2);
+    expect(err.and(Ok(3)).err().unwrap()).toBe(2);
+    expect(err.and(Err(4)).err().unwrap()).toBe(2);
+    expect(err.and()).toBe(err);
+});
