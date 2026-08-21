@@ -116,7 +116,22 @@ interface BaseOption<T> extends Iterable<T> {
      * None.orElse(() => Some(2)) // => Some(2)
      */
     orElse(other: () => Option<T>): Option<T>;
-
+    /**
+     *
+     * @returns `None` if the option is `None`.
+     *
+     * Otherwise calls predicate with the wrapped value and:
+     * @returns `Some(t)` if predicate returns `true` (where t is the wrapped value)
+     * @returns `None` if predicate returns `false`.
+     * @example
+     * ```typescript
+     * const isEven = (v:number)=> n % 2 == 0 ;
+     * const noneFilter = None.filter(isEven); // evaluates to `None` because Option is None.
+     * const someFilter1 = Some(3).filter(isEven) // evaluates to `None` because filter calculates to `false`.
+     * const someFilter2 = Some(4).filter(isEven) // evaluates to `Some(4)` because Option is Some and filter calculates to `true`.
+     * ```
+     */
+    filter(f: (v: T) => boolean): Option<T>;
     /**
      * Maps an `Option<T>` to a `Result<T, E>`.
      */
@@ -190,6 +205,9 @@ class NoneImpl implements BaseOption<never> {
         return this;
     }
     and<U>(_optb?: Option<U>): Option<U> {
+        return None;
+    }
+    filter(f?: (v: never) => boolean): None {
         return None;
     }
     toResult<E>(error: E): ErrImpl<E> {
@@ -286,6 +304,9 @@ export class SomeImpl<T> implements BaseOption<T> {
     }
     and<U>(optb: Option<U>): Option<U> {
         return optb;
+    }
+    filter(f: (v: T) => boolean): Option<T> {
+        return f(this.value) ? this : None;
     }
     toResult<E>(error?: E): OkImpl<T> {
         return Ok(this.value);

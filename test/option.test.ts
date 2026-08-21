@@ -335,3 +335,17 @@ test('Option.and', () => {
     expect(optionNone.and(Some(8))).toBe(None);
     expect(optionNone.and(None)).toBe(None);
 });
+
+test('None.filter', () => {
+    const isEven = (v: number) => v % 2 === 0;
+
+    const noneFilter = None.filter(isEven);
+    expect(noneFilter).toBe(None);
+});
+test('Some.filter', () => {
+    const isEven = (v: number) => v % 2 === 0;
+    const someFilter1 = Some(3).filter(isEven);
+    expect(someFilter1).toBe(None);
+    const someFilter2 = Some(4).filter(isEven);
+    expect(someFilter2).toEqual(Some(4));
+});
