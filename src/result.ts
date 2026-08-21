@@ -305,16 +305,30 @@ interface BaseResult<T, E> extends Iterable<T> {
      *
      * Calls a function with a reference to the contained value if `Ok`.
      *
-     * Returns the original result
+     * @returns the original result
      *
      * @example
      * ```typescript
      * const ok  = Ok(5).inspect((v)=>console.log(v+1)); // accepts a mandatory closure parameter.
-     * const err = Err('Failure').inspect(); // doesnt accept any parameter as its not intended to be used on Err.
+     * const err = Err('Failure').inspect(); // doesnt accept any parameter as its not intended to be used on `Err`.
      * const errResult = (Err('Failure') as Result<number,string>).inspect((v)=>console.log(v)); // since its of type Result it accepts the closure but its useless.
      * ```
      */
     inspect(f: (v: T) => void): Result<T, E>;
+    /**
+     *
+     * Calls a function with a reference to the contained value if `Err`.
+     *
+     * @returns the original result
+     *
+     * @example
+     * ```typescript
+     * const err = Err('Failure').inspectErr((e)=>console.log(e)); // accepts a mandatory closure parameter.
+     * const ok  = Ok(5).inspectErr(); // doesnt accept any parameter as its not intended to be used on `Ok`.
+     * const okResult = (Ok(5) as Result<number,string>).inspectErr((v)=>console.log(v)); // since its of type Result it accepts the closure but its useless.
+     * ```
+     */
+    inspectErr(f: (v: E) => void): Result<T, E>;
 }
 
 /**
@@ -448,6 +462,10 @@ export class ErrImpl<E> implements BaseResult<never, E> {
     inspect(): ErrImpl<E> {
         return this;
     }
+    inspectErr(f: (v: E) => void): ErrImpl<E> {
+        f(this.error);
+        return this;
+    }
 }
 
 // This allows Err to be callable - possible because of the es5 compilation target
@@ -563,8 +581,11 @@ export class OkImpl<T> implements BaseResult<T, never> {
     toAsyncResult(): AsyncResult<T, never> {
         return new AsyncResult(this);
     }
-    inspect(f: (v: T) => void): Result<T, never> {
+    inspect(f: (v: T) => void): OkImpl<T> {
         f(this.value);
+        return this;
+    }
+    inspectErr(): OkImpl<T> {
         return this;
     }
 }

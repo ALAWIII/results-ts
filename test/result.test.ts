@@ -553,3 +553,22 @@ test('Result.inspect', () => {
     expect(okSideEffect).toEqual(6);
     expect(errSideEffect).toBe(undefined);
 });
+test('Result.inspectErr', () => {
+    const errResult = Err('x') as Result<number, string>;
+    let errSideEffect: string | undefined;
+    const okResult = Ok(5) as Result<number, string>;
+    let okSideEffect: number | undefined;
+    expect(
+        errResult.inspectErr((v) => {
+            errSideEffect = `${v}`;
+        }),
+    ).toEqual(errResult);
+    expect(
+        okResult.inspectErr((v) => {
+            okSideEffect = 1;
+        }),
+    ).toEqual(okResult);
+
+    expect(errSideEffect).toBe('x');
+    expect(okSideEffect).toEqual(undefined);
+});

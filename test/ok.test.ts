@@ -147,3 +147,8 @@ test('Ok.inspect', () => {
     expect(called).toBe(true);
     expect(capturedValue).toBe(55);
 });
+test('Ok.inspectErr', () => {
+    const err = Ok(55);
+    expect(err.inspectErr()).toBe(err); // Same instance
+    expect(err.inspectErr()).toEqual(err); // Same value
+});

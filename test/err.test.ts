@@ -158,3 +158,17 @@ test('Err.inspect', () => {
     expect(err.inspect()).toBe(err); // Same instance
     expect(err.inspect()).toEqual(err); // Same value
 });
+test('Err.inspectErr', () => {
+    const err = Err(55);
+    let called = false;
+    let capturedValue = 0;
+
+    const result = err.inspectErr((v) => {
+        called = true;
+        capturedValue = v;
+    });
+
+    expect(result).toBe(err);
+    expect(called).toBe(true);
+    expect(capturedValue).toBe(55);
+});
