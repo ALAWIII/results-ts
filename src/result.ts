@@ -463,8 +463,7 @@ export class ErrImpl<E> implements BaseResult<never, E> {
     }
 }
 
-// This allows Err to be callable - possible because of the es5 compilation target
-
+export type Err<E> = ErrImpl<E>;
 export function Err<E>(val: E): ErrImpl<E> {
     return new ErrImpl(val);
 }
@@ -581,8 +580,8 @@ export class OkImpl<T> implements BaseResult<T, never> {
         return this;
     }
 }
+export type Ok<T> = OkImpl<T>;
 
-// This allows Ok to be callable - possible because of the es5 compilation target
 export function Ok<T>(val: T): OkImpl<T> {
     return new OkImpl(val);
 }
