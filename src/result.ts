@@ -301,7 +301,19 @@ interface BaseResult<T, E> extends Iterable<T> {
      * Useful when you need to compose results with asynchronous code.
      */
     toAsyncResult(): AsyncResult<T, E>;
-
+    /**
+     *
+     * Calls a function with a reference to the contained value if `Ok`.
+     *
+     * Returns the original result
+     *
+     * @example
+     * ```typescript
+     * const ok  = Ok(5).inspect((v)=>console.log(v+1)); // accepts a mandatory closure parameter.
+     * const err = Err('Failure').inspect(); // doesnt accept any parameter as its not intended to be used on Err.
+     * const errResult = (Err('Failure') as Result<number,string>).inspect((v)=>console.log(v)); // since its of type Result it accepts the closure but its useless.
+     * ```
+     */
     inspect(f: (v: T) => void): Result<T, E>;
 }
 
