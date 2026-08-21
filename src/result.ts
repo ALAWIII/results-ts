@@ -487,16 +487,8 @@ export class OkImpl<T> implements BaseResult<T, never> {
         return this.value;
     }
 
-    unwrapOrElse(_f?: unknown): T {
+    unwrapOrElse<T2>(_f?: (error: never) => T2): T {
         return this.value;
-    }
-
-    expect(_msg?: string): T {
-        return this.value;
-    }
-
-    expectErr(msg: string): never {
-        throw new Error(msg);
     }
 
     unwrap(): T {
@@ -508,6 +500,13 @@ export class OkImpl<T> implements BaseResult<T, never> {
         // (the definition says it has to be an Error while it can be anything).
         // See https://github.com/microsoft/TypeScript/issues/45167
         throw new Error(`Tried to unwrap Ok: ${toString(this.value)}`, { cause: this.value as any });
+    }
+    expect(_msg?: string): T {
+        return this.value;
+    }
+
+    expectErr(msg: string): never {
+        throw new Error(msg);
     }
 
     map<U>(mapper: (val: T) => U): Result<U, never> {
