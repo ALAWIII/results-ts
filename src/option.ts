@@ -166,15 +166,15 @@ class NoneImpl implements BaseOption<never> {
         throw new Error(`Tried to unwrap None`);
     }
 
-    map<T2>(_mapper: unknown): None {
+    map<T2>(_mapper?: unknown): None {
         return this;
     }
 
-    mapOr<T2>(default_: T2, _mapper: unknown): T2 {
+    mapOr<T2>(default_: T2, _mapper?: unknown): T2 {
         return default_;
     }
 
-    mapOrElse<U>(default_: () => U, _mapper: unknown): U {
+    mapOrElse<U>(default_: () => U, _mapper?: unknown): U {
         return default_();
     }
 
@@ -186,7 +186,7 @@ class NoneImpl implements BaseOption<never> {
         return other();
     }
 
-    andThen<T2>(op: unknown): None {
+    andThen<T2>(_mapper?: unknown): None {
         return this;
     }
     and<U>(_optb?: Option<U>): Option<U> {
@@ -246,19 +246,18 @@ export class SomeImpl<T> implements BaseOption<T> {
         this.value = val;
     }
 
-    unwrapOr(_val: unknown): T {
+    unwrapOr(_val?: unknown): T {
         return this.value;
     }
 
-    unwrapOrElse(_f: unknown): T {
-        return this.value;
-    }
-
-    expect(_msg: string): T {
+    unwrapOrElse(_f?: unknown): T {
         return this.value;
     }
 
     unwrap(): T {
+        return this.value;
+    }
+    expect(_msg?: string): T {
         return this.value;
     }
 
@@ -274,11 +273,11 @@ export class SomeImpl<T> implements BaseOption<T> {
         return mapper(this.value);
     }
 
-    or(_other: Option<T>): Option<T> {
+    or(_other?: Option<T>): Option<T> {
         return this;
     }
 
-    orElse(_other: () => Option<T>): Option<T> {
+    orElse(_other?: () => Option<T>): Option<T> {
         return this;
     }
 
@@ -288,7 +287,7 @@ export class SomeImpl<T> implements BaseOption<T> {
     and<U>(optb: Option<U>): Option<U> {
         return optb;
     }
-    toResult<E>(error: E): OkImpl<T> {
+    toResult<E>(error?: E): OkImpl<T> {
         return Ok(this.value);
     }
 
