@@ -301,9 +301,8 @@ export class SomeImpl<T> implements BaseOption<T> {
     }
 }
 
-// This allows Some to be callable - possible because of the es5 compilation target
-
-export function Some<E>(val: E): SomeImpl<E> {
+export type Some<T> = SomeImpl<T>;
+export function Some<T>(val: T): SomeImpl<T> {
     return new SomeImpl(val);
 }
 export type Option<T> = SomeImpl<T> | None;
