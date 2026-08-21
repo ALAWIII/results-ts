@@ -344,22 +344,10 @@ export class ErrImpl<E> implements BaseResult<never, E> {
      * ```
      */
     static readonly EMPTY = new ErrImpl<void>(undefined);
-    private readonly _stack!: string;
     readonly error!: E;
 
     constructor(val: E) {
-        if (!(this instanceof ErrImpl)) {
-            return new ErrImpl(val);
-        }
-
         this.error = val;
-
-        const stackLines = new Error().stack!.split('\n').slice(2);
-        if (stackLines && stackLines.length > 0 && stackLines[0].includes('ErrImpl')) {
-            stackLines.shift();
-        }
-
-        this._stack = stackLines.join('\n');
     }
     isOk(): this is OkImpl<never> {
         return false;
@@ -394,7 +382,7 @@ export class ErrImpl<E> implements BaseResult<never, E> {
         // The cause casting required because of the current TS definition being overly restrictive
         // (the definition says it has to be an Error while it can be anything).
         // See https://github.com/microsoft/TypeScript/issues/45167
-        throw new Error(`${msg} - Error: ${toString(this.error)}\n${this._stack}`, { cause: this.error as any });
+        throw new Error(`${msg} - Error: ${toString(this.error)}`, { cause: this.error as any });
     }
 
     expectErr(_msg: string): E {
@@ -402,10 +390,7 @@ export class ErrImpl<E> implements BaseResult<never, E> {
     }
 
     unwrap(): never {
-        // The cause casting required because of the current TS definition being overly restrictive
-        // (the definition says it has to be an Error while it can be anything).
-        // See https://github.com/microsoft/TypeScript/issues/45167
-        throw new Error(`Tried to unwrap Error: ${toString(this.error)}\n${this._stack}`, { cause: this.error as any });
+        throw this.error;
     }
 
     unwrapErr(): E {
@@ -450,10 +435,6 @@ export class ErrImpl<E> implements BaseResult<never, E> {
     }
     toString(): string {
         return `Err(${toString(this.error)})`;
-    }
-
-    get stack(): string | undefined {
-        return `${this}\n${this._stack}`;
     }
 
     toAsyncResult(): AsyncResult<never, E> {

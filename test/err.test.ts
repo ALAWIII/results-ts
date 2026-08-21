@@ -65,12 +65,12 @@ test('expectErr', () => {
 
 test('unwrap', () => {
     try {
-        const err = Err({ message: 'bad error' }).unwrap();
+        const err = Err(new Error('bad error', { cause: 'error cause' })).unwrap();
         expect_never(err, true);
         throw Error('Unreachable');
     } catch (e) {
-        expect((e as Error).message).toMatch('{"message":"bad error"}');
-        expect((e as Error).cause).toEqual({ message: 'bad error' });
+        expect((e as Error).message).toMatch('bad error');
+        expect((e as Error).cause).toEqual('error cause');
     }
 });
 
@@ -118,26 +118,6 @@ test('iterable', () => {
 test('to string', () => {
     expect(`${Err(1)}`).toEqual('Err(1)');
     expect(`${Err({ name: 'George' })}`).toEqual('Err({"name":"George"})');
-});
-
-test('stack trace', () => {
-    function first(): ErrImpl<number> {
-        return second();
-    }
-
-    function second(): ErrImpl<number> {
-        return Err(1);
-    }
-
-    const err = first();
-    expect(err.stack).toMatch(/at second/);
-    expect(err.stack).toMatch(/at first/);
-    expect(err.stack).toMatch(/err\.test\.ts/);
-    expect(err.stack).toMatch(/Err\(1\)/);
-    expect(err.stack).not.toMatch(/ErrImpl/);
-
-    const err2 = Err(Error('inner error'));
-    expect(err2.stack).toMatch(/Err\(Error: inner error\)/);
 });
 
 test('Err.isOkAnd', () => {
