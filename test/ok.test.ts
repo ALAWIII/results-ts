@@ -128,9 +128,9 @@ test('Ok.isErrAnd', () => {
     expect(Ok(1).isErrAnd()).toBe(false);
 });
 
-test('Ok.toError', () => {
-    expect(Ok(55).toError()).toBe(None);
-    expect(Ok(55).toError()).not.toEqual(Some(55));
+test('Ok.err', () => {
+    expect(Ok(55).err()).toBe(None);
+    expect(Ok(55).err()).not.toEqual(Some(55));
 });
 
 test('Ok.inspect', () => {

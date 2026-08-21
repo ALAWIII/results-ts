@@ -282,7 +282,7 @@ interface BaseResult<T, E> extends Iterable<T> {
      * Ok(5).toOption() // evaluates to Some(5)
      * Err('your error').toOption() // evaluates to None
      */
-    toOption(): Option<T>;
+    ok(): Option<T>;
     /**
      *  Converts from `Result<T, E>` to `Option<E>`, discarding the value if any
      *
@@ -294,7 +294,7 @@ interface BaseResult<T, E> extends Iterable<T> {
      * Ok(5).toError() // evaluates to None
      *
      */
-    toError(): Option<E>;
+    err(): Option<E>;
     /**
      * Creates an `AsyncResult` based on this `Result`.
      *
@@ -416,10 +416,10 @@ export class ErrImpl<E> implements BaseResult<never, E> {
         return other(this.error);
     }
 
-    toOption(): Option<never> {
+    ok(): Option<never> {
         return None;
     }
-    toError(): Option<E> {
+    err(): Option<E> {
         return Some(this.error);
     }
     toString(): string {
@@ -538,10 +538,10 @@ export class OkImpl<T> implements BaseResult<T, never> {
         return this;
     }
 
-    toOption(): Option<T> {
+    ok(): Option<T> {
         return Some(this.value);
     }
-    toError(): Option<never> {
+    err(): Option<never> {
         return None;
     }
     toString(): string {

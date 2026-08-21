@@ -420,14 +420,14 @@ test('Issue #24', () => {
     };
 });
 
-test('To option', () => {
+test('ok', () => {
     const result = Ok('hello') as Result<string, number>;
-    const option = result.toOption();
+    const option = result.ok();
     eq<typeof option, Option<string>>(true);
     expect(option).toEqual(Some('hello'));
 
     const result2: Result<string, number> = Err(32);
-    const option2 = result2.toOption();
+    const option2 = result2.ok();
     expect(option2).toEqual(None);
 });
 

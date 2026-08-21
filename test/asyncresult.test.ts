@@ -71,9 +71,9 @@ test('orElse() should work', async () => {
     expect(await badResult.orElse(() => Promise.resolve(Ok(200))).promise).toEqual(Ok(200));
 });
 
-test('toOption() should work', async () => {
+test('ok() should work', async () => {
     const result = new AsyncResult(Ok(1));
-    expect(await result.toOption().promise).toEqual(Some(1));
+    expect(await result.ok().promise).toEqual(Some(1));
 });
 
 test('AsyncResult should be awaitable', async () => {

@@ -148,9 +148,9 @@ test('Err.isErrAnd', () => {
     expect(Err('Failure').isErrAnd((e) => e === 'Success')).toBe(false);
 });
 
-test('Err.toError', () => {
-    expect(Err(55).toError()).toEqual(Some(55));
-    expect(Err(55).toError()).not.toBe(None);
+test('Err.err', () => {
+    expect(Err(55).err()).toEqual(Some(55));
+    expect(Err(55).err()).not.toBe(None);
 });
 
 test('Err.inspect', () => {
