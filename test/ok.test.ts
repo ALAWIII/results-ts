@@ -78,7 +78,7 @@ test('unwrapErr', () => {
 });
 
 test('map', () => {
-    const mapped = Ok(3).map((x) => x.toString(10));
+    const mapped = Ok(3).map((x) => x.toString(10)) as OkImpl<string>;
     expect(mapped).toMatchResult(Ok('3'));
     eq<typeof mapped, OkImpl<string>>(true);
 });
@@ -94,7 +94,7 @@ test('andThen', () => {
 });
 
 test('mapErr', () => {
-    const ok = Ok('32').mapErr((x: any) => +x);
+    const ok = Ok('32').mapErr((x: any) => +x) as OkImpl<string>;
     expect(ok).toMatchResult(Ok('32'));
     eq<typeof ok, OkImpl<string>>(true);
 });

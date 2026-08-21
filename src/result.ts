@@ -257,8 +257,7 @@ interface BaseResult<T, E> extends Iterable<T> {
      * Ok(1).or(Ok(2)) // => Ok(1)
      * Err('error here').or(Ok(2)) // => Ok(2)
      */
-    or<E2>(other: Result<T, E2>): Result<T, E2>;
-
+    or<T2, E2>(other: Result<T2, E2>): Result<T2 | T, E2>;
     /**
      * Returns `Ok()` if we have a value, otherwise returns the result
      * of calling `other()`.
@@ -349,10 +348,17 @@ export class ErrImpl<E> implements BaseResult<never, E> {
     constructor(val: E) {
         this.error = val;
     }
+    [Symbol.iterator](): Iterator<never, never, any> {
+        return {
+            next(): IteratorResult<never, never> {
+                return { done: true, value: undefined! };
+            },
+        };
+    }
     isOk(): this is OkImpl<never> {
         return false;
     }
-    isOkAnd(): boolean {
+    isOkAnd(_f?: (v: never) => boolean): boolean {
         return false;
     }
     isErr(): this is ErrImpl<E> {
@@ -362,31 +368,11 @@ export class ErrImpl<E> implements BaseResult<never, E> {
         return f(this.error);
     }
 
-    [Symbol.iterator](): Iterator<never, never, any> {
-        return {
-            next(): IteratorResult<never, never> {
-                return { done: true, value: undefined! };
-            },
-        };
-    }
-
     unwrapOr<T2>(val: T2): T2 {
         return val;
     }
-
     unwrapOrElse<T2>(f: (error: E) => T2): T2 {
         return f(this.error);
-    }
-
-    expect(msg: string): never {
-        // The cause casting required because of the current TS definition being overly restrictive
-        // (the definition says it has to be an Error while it can be anything).
-        // See https://github.com/microsoft/TypeScript/issues/45167
-        throw new Error(`${msg} - Error: ${toString(this.error)}`, { cause: this.error as any });
-    }
-
-    expectErr(_msg: string): E {
-        return this.error;
     }
 
     unwrap(): never {
@@ -396,30 +382,37 @@ export class ErrImpl<E> implements BaseResult<never, E> {
     unwrapErr(): E {
         return this.error;
     }
+    expect(msg: string): never {
+        // The cause casting required because of the current TS definition being overly restrictive
+        // (the definition says it has to be an Error while it can be anything).
+        // See https://github.com/microsoft/TypeScript/issues/45167
+        throw new Error(`${msg} - Error: ${toString(this.error)}`, { cause: this.error as any });
+    }
 
-    map(_mapper: unknown): ErrImpl<E> {
+    expectErr(_msg?: string): E {
+        return this.error;
+    }
+
+    map<U>(_mapper?: (val: never) => U): Result<never, E> {
         return this;
     }
 
-    andThen<T2, E2>(op: (val: never) => Result<T2, E2>): Result<T2, E | E2> {
+    andThen<T2, E2>(_op?: (val: never) => Result<T2, E2>): Result<T2, E | E2> {
         return this;
     }
-
-    mapErr<E2>(mapper: (err: E) => E2): ErrImpl<E2> {
+    mapErr<E2>(mapper: (val: E) => E2): Result<never, E2> {
         return Err(mapper(this.error));
     }
 
-    mapOr<U>(default_: U, _mapper: unknown): U {
+    mapOr<U>(default_: U, _mapper: (val: never) => U): U {
         return default_;
     }
 
-    mapOrElse<U>(default_: (error: E) => U, _mapper: unknown): U {
+    mapOrElse<U>(default_: (error: E) => U, _mapper: (val: never) => U): U {
         return default_(this.error);
     }
 
-    or<T>(other: OkImpl<T>): Result<T, never>;
-    or<R extends Result<any, any>>(other: R): R;
-    or<T, E2>(other: Result<T, E2>): Result<T, E2> {
+    or<T2, E2>(other: Result<T2, E2>): Result<T2, E2> {
         return other;
     }
 
@@ -440,10 +433,10 @@ export class ErrImpl<E> implements BaseResult<never, E> {
     toAsyncResult(): AsyncResult<never, E> {
         return new AsyncResult(this);
     }
-    inspect(): ErrImpl<E> {
+    inspect(_f?: (v: never) => void): Result<never, E> {
         return this;
     }
-    inspectErr(f: (v: E) => void): ErrImpl<E> {
+    inspectErr(f: (v: E) => void): Result<never, E> {
         f(this.error);
         return this;
     }
@@ -471,10 +464,6 @@ export class OkImpl<T> implements BaseResult<T, never> {
     readonly value!: T;
 
     constructor(val: T) {
-        if (!(this instanceof OkImpl)) {
-            return new OkImpl(val);
-        }
-
         this.value = val;
     }
 
@@ -487,22 +476,22 @@ export class OkImpl<T> implements BaseResult<T, never> {
     isErr(): this is ErrImpl<never> {
         return false;
     }
-    isErrAnd(): boolean {
+    isErrAnd(_f?: (e: never) => boolean): boolean {
         return false;
     }
     [Symbol.iterator](): Iterator<T> {
         return [this.value][Symbol.iterator]();
     }
 
-    unwrapOr(_val: unknown): T {
+    unwrapOr(_val?: unknown): T {
         return this.value;
     }
 
-    unwrapOrElse(_f: unknown): T {
+    unwrapOrElse(_f?: unknown): T {
         return this.value;
     }
 
-    expect(_msg: string): T {
+    expect(_msg?: string): T {
         return this.value;
     }
 
@@ -521,7 +510,7 @@ export class OkImpl<T> implements BaseResult<T, never> {
         throw new Error(`Tried to unwrap Ok: ${toString(this.value)}`, { cause: this.value as any });
     }
 
-    map<T2>(mapper: (val: T) => T2): OkImpl<T2> {
+    map<U>(mapper: (val: T) => U): Result<U, never> {
         return Ok(mapper(this.value));
     }
 
@@ -529,7 +518,7 @@ export class OkImpl<T> implements BaseResult<T, never> {
         return mapper(this.value);
     }
 
-    mapErr(_mapper: unknown): OkImpl<T> {
+    mapErr<F>(_mapper?: (val: never) => F): Result<T, F> {
         return this;
     }
 
@@ -541,7 +530,7 @@ export class OkImpl<T> implements BaseResult<T, never> {
         return mapper(this.value);
     }
 
-    or(_other: Result<T, any>): OkImpl<T> {
+    or<T2, E2>(_other?: Result<T2, E2>): Result<T, E2> {
         return this;
     }
 
@@ -562,11 +551,11 @@ export class OkImpl<T> implements BaseResult<T, never> {
     toAsyncResult(): AsyncResult<T, never> {
         return new AsyncResult(this);
     }
-    inspect(f: (v: T) => void): OkImpl<T> {
+    inspect(f: (v: T) => void): Result<T, never> {
         f(this.value);
         return this;
     }
-    inspectErr(): OkImpl<T> {
+    inspectErr(_f?: (v: never) => void): Result<T, never> {
         return this;
     }
 }

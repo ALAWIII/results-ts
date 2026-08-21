@@ -432,7 +432,7 @@ test('ok', () => {
 });
 
 test('or / orElse', () => {
-    const result = Err('boo') as Result<number, string>;
+    const result = Err('boo');
 
     const afterOrElseAlwaysErr = result.orElse((error) => Err(error === 'boo'));
     eq<typeof afterOrElseAlwaysErr, Result<number | unknown, boolean>>(true);
@@ -442,9 +442,9 @@ test('or / orElse', () => {
     eq<typeof afterOrElseAnyResult, Result<number | 1, string>>(true);
 
     const afterOrErr = result.or(Err(true));
-    eq<typeof afterOrErr, Result<number, boolean>>(true);
+    eq<typeof afterOrErr, Result<unknown, boolean>>(true);
     const afterOrOk = result.or(Ok(1));
-    eq<typeof afterOrOk, Result<number, never>>(true);
+    eq<typeof afterOrOk, Result<number, unknown>>(true);
     const afterOrResult = result.or(Err(true) as Result<number, boolean>);
     eq<typeof afterOrResult, Result<number, boolean>>(true);
 
