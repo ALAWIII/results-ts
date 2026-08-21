@@ -534,7 +534,7 @@ export class OkImpl<T> implements BaseResult<T, never> {
         return this;
     }
 
-    orElse<T2, E2>(_other: (error: never) => Result<T2, E2>): Result<T, never> {
+    orElse<T2, E2>(_other?: (error: never) => Result<T2, E2>): Result<T, never> {
         return this;
     }
 
