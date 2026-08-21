@@ -63,7 +63,11 @@ interface BaseOption<T> extends Iterable<T> {
      * This function can be used for control flow based on `Option` values.
      */
     andThen<T2>(mapper: (val: T) => Option<T2>): Option<T2>;
-
+    /**
+     * @returns `None` if the Option is `None`.
+     * @returns `optb` if the Option is `Some`.
+     */
+    and<U>(optb: Option<U>): Option<U>;
     /**
      * Maps an `Option<T>` to `Option<U>` by applying a function to a contained `Some` value,
      * leaving a `None` value untouched.
@@ -185,7 +189,9 @@ class NoneImpl implements BaseOption<never> {
     andThen<T2>(op: unknown): None {
         return this;
     }
-
+    and<U>(_optb?: Option<U>): Option<U> {
+        return None;
+    }
     toResult<E>(error: E): ErrImpl<E> {
         return Err(error);
     }
@@ -279,7 +285,9 @@ export class SomeImpl<T> implements BaseOption<T> {
     andThen<T2>(mapper: (val: T) => Option<T2>): Option<T2> {
         return mapper(this.value);
     }
-
+    and<U>(optb: Option<U>): Option<U> {
+        return optb;
+    }
     toResult<E>(error: E): OkImpl<T> {
         return Ok(this.value);
     }

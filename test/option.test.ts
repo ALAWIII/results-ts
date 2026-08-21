@@ -320,3 +320,18 @@ test('fromNullish', () => {
     expect(zero).toEqual(Some(0));
     eq<Option<number>, typeof zero>(true);
 });
+test('None.and', () => {
+    const noneAnd = None;
+    expect(noneAnd.and()).toBe(noneAnd);
+    expect(noneAnd.and(Some(7))).toBe(noneAnd);
+});
+test('Some.and', () => {
+    const some = Some(8);
+    expect(some.and(Some(8))).toEqual(Some(8));
+    expect(some.and(None)).toBe(None);
+});
+test('Option.and', () => {
+    const optionNone = None as Option<number>;
+    expect(optionNone.and(Some(8))).toBe(None);
+    expect(optionNone.and(None)).toBe(None);
+});
