@@ -274,6 +274,54 @@ interface BaseOption<T> extends Iterable<T> {
      */
     xor<U = T>(other: Option<U | T>): Option<U | T>;
     /**
+     * Transposes an `Option` of a `Result` into a `Result` of an `Option`.
+     *
+     * If the `Option` is `None`, returns `Ok(None)`.
+     * If the `Option` is `Some` containing a `Result`:
+     *   - `Some(Ok(value))` → `Ok(Some(value))`
+     *   - `Some(Err(error))` → `Err(error)`
+     * If the `Option` is `Some` containing a non-`Result` value, returns `Ok(Some(value))`.
+     *
+     * @typeParam U - The success type of the inner Result (if T is a Result)
+     * @typeParam E - The error type of the inner Result (if T is a Result)
+     * @returns `Result<Option<T | U>, E>` - transposed Result containing an Option
+     *
+     * @example
+     * // Option of Ok Result → Ok(Some(value))
+     * const x = Some(Ok(5));
+     * const result = x.transpose(); // => Ok(Some(5))
+     *
+     * @example
+     * // Option of Err Result → Err(error)
+     * const x = Some(Err("failed"));
+     * const result = x.transpose(); // => Err("failed")
+     *
+     * @example
+     * // None → Ok(None)
+     * const result = None.transpose(); // => Ok(None)
+     *
+     * @example
+     * // Some with non-Result value → Ok(Some(value))
+     * const x = Some(42);
+     * const result = x.transpose(); // => Ok(Some(42))
+     *
+     * @example
+     * // Useful for collecting Results from Options
+     * // Before: Option<Result<number, string>>
+     * // After:  Result<Option<number>, string>
+     *
+     * function parseNumber(s: string): Result<number, string> {
+     *   const num = parseInt(s);
+     *   return isNaN(num) ? Err(`Invalid: ${s}`) : Ok(num);
+     * }
+     *
+     * const opt = Some(parseNumber("123"));
+     * const result = opt.transpose(); // => Ok(Some(123))
+     *
+     * @see {@link Result.transpose} - Inverse operation (Result<Option<T>, E> → Option<Result<T, E>>)
+     */
+    transpose<E, U = T>(): Result<Option<T | U>, E>;
+    /**
      * Creates an `AsyncOption` based on this `Option`.
      *
      * Useful when you need to compose results with asynchronous code.
@@ -364,6 +412,9 @@ class NoneImpl implements BaseOption<never> {
     }
     xor<U = never>(other: Option<U>): Option<U> {
         return other;
+    }
+    transpose<E, U>(): Result<Option<U>, E> {
+        return Ok(None);
     }
     toString(): string {
         return 'None';
@@ -485,6 +536,12 @@ export class SomeImpl<T> implements BaseOption<T> {
     }
     xor(other: Option<T>): Option<T> {
         return other.isNone() ? this : None;
+    }
+    transpose<E, U = T>(): Result<Option<T>, E> {
+        if (!Result.isResult(this.value)) {
+            return Ok(Some(this.value));
+        }
+        return this.value.isErr() ? this.value : Ok(Some(this.value.value));
     }
     toAsyncOption(): AsyncOption<T> {
         return new AsyncOption(this);

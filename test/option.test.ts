@@ -530,3 +530,48 @@ test('Option.xor accepts None return Some', () => {
     const some = Some(5) as Option<number>;
     expect(some.xor(None)).toEqual(Some(5));
 });
+//==============
+
+// transpose tests
+describe('Option.transpose', () => {
+    // None case
+    test('None.transpose() should return Ok(None)', () => {
+        const result = None.transpose();
+        expect(result.isOk()).toBe(true);
+        expect(result.unwrap()).toBe(None);
+    });
+
+    // Some with Ok result
+    test('Some(Ok(value)).transpose() should return Ok(Some(value))', () => {
+        const opt = Some(Ok(42));
+        const result = opt.transpose<number, string>();
+        expect(result.isOk()).toBe(true);
+        expect(result.unwrap()).toBeInstanceOf(SomeImpl);
+        expect(result.unwrap()).toEqual(Some(42));
+    });
+
+    // Some with Err result
+    test('Some(Err(error)).transpose() should return Err(error)', () => {
+        const error = 'something went wrong';
+        const opt = Some(Err(error));
+        const result = opt.transpose<number, string>();
+        expect(result.isErr()).toBe(true);
+        expect(result.unwrapErr()).toBe(error);
+    });
+
+    // Some with non-Result value
+    test('Some(nonResult).transpose() should return Ok(Some(nonResult))', () => {
+        const opt = Some(42);
+        const result = opt.transpose<string>();
+        expect(result.isOk()).toBe(true);
+        expect(result.unwrap()).toBeInstanceOf(SomeImpl);
+        expect(result.unwrap()).toEqual(Some(42));
+    });
+
+    test('Some("hello").transpose() should return Ok(Some("hello"))', () => {
+        const opt = Some('hello');
+        const result = opt.transpose<number>();
+        expect(result.isOk()).toBe(true);
+        expect(result.unwrap().unwrap()).toBe('hello');
+    });
+});
