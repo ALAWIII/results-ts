@@ -228,15 +228,17 @@ interface BaseOption<T> extends Iterable<T> {
 
     /**
      * Transforms the `Option<T>` into a `Result<T, E>`, mapping `Some(v)` to `Ok(v)` and `None` to `Err(err)`.
+     * @example
+     * Some(4).okOr('err'); // evaluates to Ok(4).
+     * None.okOr('your error'); // evaluates to Err('your error').
      */
     okOr<E>(err: E): Result<T, E>;
-
     /**
      * Transforms the `Option<T>` into a `Result<T, E>`, mapping `Some(v)` to `Ok(v)` and `None` to `Err(err())`.
      * @example
      * const errFun = ()=> 'your error';
      *
-     * const some = Some(6).okOrElse(errFun); // evaluates to Some(6)
+     * const some = Some(6).okOrElse(errFun); // evaluates to Ok(6)
      *
      * const none = None.okOrElse(errFun); // evaluates to Err('err')
      *
