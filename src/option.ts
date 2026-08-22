@@ -229,7 +229,7 @@ interface BaseOption<T> extends Iterable<T> {
     /**
      * Maps an `Option<T>` to a `Result<T, E>`.
      */
-    ok_or<E>(error: E): Result<T, E>;
+    okOr<E>(error: E): Result<T, E>;
 
     /**
      * Creates an `AsyncOption` based on this `Option`.
@@ -314,7 +314,7 @@ class NoneImpl implements BaseOption<never> {
     collapse<U = never>(depth?: number): Option<U> {
         return this;
     }
-    ok_or<E>(error: E): ErrImpl<E> {
+    okOr<E>(error: E): ErrImpl<E> {
         return Err(error);
     }
 
@@ -430,7 +430,7 @@ export class SomeImpl<T> implements BaseOption<T> {
 
         return result as Option<U>;
     }
-    ok_or<E>(error?: E): OkImpl<T> {
+    okOr<E>(error?: E): OkImpl<T> {
         return Ok(this.value);
     }
 
