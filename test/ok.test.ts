@@ -1,5 +1,5 @@
 import { assert } from 'conditional-type-checks';
-import { Err, None, Ok, OkImpl, Result, Some, SomeImpl } from '../src/index.js';
+import { Err, None, Ok, OkImpl, Option, Result, Some, SomeImpl } from '../src/index.js';
 import { eq, expect_never, expect_string } from './util.js';
 
 test('Constructable & Callable', () => {
@@ -312,7 +312,11 @@ describe('OkImpl.transpose', () => {
         expect(result.unwrap()).toBeInstanceOf(OkImpl);
         expect(result.unwrap()).toMatchResult(Ok(42));
     });
-
+    test('check inference after transpose Ok(Some(Some(val))) -> Some(Ok(Some(val)))', () => {
+        const ok = Ok(Some(Some(4)));
+        const tok = ok.transpose();
+        eq<typeof tok, Option<Result<SomeImpl<number>, never>>>(true);
+    });
     test('Ok(None) -> None', () => {
         const ok = Ok(None);
         const result = ok.transpose();

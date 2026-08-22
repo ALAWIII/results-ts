@@ -1,5 +1,5 @@
 import { assert } from 'conditional-type-checks';
-import { Err, ErrImpl, None, Ok, Result, Some, SomeImpl } from '../src/index.js';
+import { Err, ErrImpl, None, Ok, Option, Result, Some, SomeImpl } from '../src/index.js';
 import { eq, expect_never } from './util.js';
 
 test('Constructable & Callable', () => {
@@ -223,7 +223,7 @@ describe('Err.collapse', () => {
     });
 });
 //====
-describe('ErrImpl', () => {
+describe('ErrImpl.transpose', () => {
     test('transposes Err to Some(Err)', () => {
         const err = Err('oops');
         const result = err.transpose();
@@ -231,7 +231,11 @@ describe('ErrImpl', () => {
         expect(result.unwrap()).toBeInstanceOf(ErrImpl);
         expect(result.unwrap()).toMatchResult(Err('oops'));
     });
-
+    test('check inference after transpose Ok(Some(Some(val))) -> Some(Ok(Some(val)))', () => {
+        const ok = Ok(Some(Err(4)));
+        const tok = ok.transpose();
+        eq<typeof tok, Option<Result<Err<number>, never>>>(true);
+    });
     test('preserves error value', () => {
         const err = Err(404) as Result<number, number>;
         const result = err.transpose();
