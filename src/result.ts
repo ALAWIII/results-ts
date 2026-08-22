@@ -438,6 +438,61 @@ interface BaseResult<T, E> extends Iterable<T> {
      * @see {@link andThen} - For chaining operations
      */
     collapse<U = T, E2 = E>(depth: number): Result<U | T, E | E2>;
+    /**
+     * Transposes a `Result` of an `Option` into an `Option` of a `Result`.
+     *
+     * This method swaps the layers of `Result` and `Option`:
+     * - `Ok(Some(value))` → `Some(Ok(value))`
+     * - `Ok(None)` → `None`
+     * - `Err(error)` → `Some(Err(error))`
+     *
+     * For `Ok` variants that do not contain an `Option`, the operation is idempotent,
+     * returning `Some(Ok(originalValue))`.
+     *
+     * @typeparam T2 - The inner success type extracted from `Option<T>`. If `T` is not an `Option`,
+     *                 `T2` defaults to `T` to preserve idempotency.
+     * @typeparam E2 - The error type, defaulting to `E`.
+     * @returns An `Option` containing a `Result`:
+     *          - `Some(Ok(value))` if the original was `Ok(Some(value))`
+     *          - `None` if the original was `Ok(None)`
+     *          - `Some(Err(error))` if the original was `Err(error)`
+     *
+     * @example
+     * // Basic usage with Option
+     * const result1 = Ok(Some(42));
+     * const transposed1 = result1.transpose(); // Some(Ok(42))
+     *
+     * const result2 = Ok(None);
+     * const transposed2 = result2.transpose(); // None
+     *
+     * const result3 = Err("error");
+     * const transposed3 = result3.transpose(); // Some(Err("error"))
+     *
+     * @example
+     * // Idempotency with non-Option values
+     * const result = Ok("hello");
+     * const transposed = result.transpose(); // Some(Ok("hello"))
+     *
+     * @example
+     * // Chaining with other operations
+     * const result = Ok(Some(10));
+     * const value = result
+     *   .transpose()           // Some(Ok(10))
+     *   .unwrap()              // Ok(10)
+     *   .map(x => x * 2)       // Ok(20)
+     *   .unwrap();             // 20
+     *
+     * @example
+     * // Handling errors
+     * const result = Err("not found");
+     * const opt = result.transpose(); // Some(Err("not found"))
+     * if (opt.isSome()) {
+     *   const errResult = opt.unwrap(); // Err("not found")
+     *   console.error(errResult); // Err("not found")
+     * }
+     *
+     */
+    transpose<T2 = UnwrapOption<T>, E2 = E>(): Option<Result<T2, E2 | E>>;
 }
 
 /**
@@ -558,6 +613,9 @@ export class ErrImpl<E> implements BaseResult<never, E> {
     }
     collapse<U = never, E2 = E>(_depth?: number): Result<U, E | E2> {
         return this;
+    }
+    transpose<T2 = never, E2 = E>(): Option<Result<T2, E>> {
+        return Some(Err(this.error));
     }
 }
 
@@ -693,7 +751,19 @@ export class OkImpl<T> implements BaseResult<T, never> {
         }
         return result as Result<T | U, E2>;
     }
+    transpose<T2 = UnwrapOption<T>, E2 = never>(): Option<Result<T2, E2>> {
+        if (!Option.isOption(this.value)) {
+            // if the contained value wasnt option
+            return Some(Ok(this.value as unknown as T2));
+        }
+        const opt = this.value;
+        if (opt.isNone()) {
+            return None;
+        }
+        return Some(Ok(opt.unwrap()));
+    }
 }
+type UnwrapOption<T> = T extends Option<infer U> ? U : T;
 export type Ok<T> = OkImpl<T>;
 
 export function Ok<T>(val: T): OkImpl<T> {

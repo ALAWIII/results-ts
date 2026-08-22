@@ -1,5 +1,5 @@
 import { assert } from 'conditional-type-checks';
-import { Err, None, Ok, OkImpl, Result, Some } from '../src/index.js';
+import { Err, None, Ok, OkImpl, Result, Some, SomeImpl } from '../src/index.js';
 import { eq, expect_never, expect_string } from './util.js';
 
 test('Constructable & Callable', () => {
@@ -283,5 +283,36 @@ describe('Ok.collapse', () => {
         const ok = Ok(Ok(Ok(42))) as Result<Result<Result<Inner, string>, string>, Outer>;
         const result = ok.collapse<Inner, string>(2);
         expect(result.unwrap()).toBe(42);
+    });
+});
+//====
+
+describe('OkImpl.transpose', () => {
+    test('Ok(Some(value)) -> Some(Ok(value))', () => {
+        const ok = Ok(Some(42));
+        const result = ok.transpose();
+        expect(result).toBeInstanceOf(SomeImpl);
+        expect(result.unwrap()).toBeInstanceOf(OkImpl);
+        expect(result.unwrap()).toMatchResult(Ok(42));
+    });
+
+    test('Ok(None) -> None', () => {
+        const ok = Ok(None);
+        const result = ok.transpose();
+        expect(result).toBe(None);
+    });
+
+    test('preserves inner value type', () => {
+        const ok = Ok(Some('hello'));
+        const result = ok.transpose();
+        expect(result.unwrap()).toMatchResult(Ok('hello'));
+    });
+
+    test('is idempotent when inner is Some', () => {
+        const ok = Ok(Some(5));
+        const first = ok.transpose(); // Some(Ok(5))
+        const inner = first.unwrap(); // Ok(5)
+        const second = ok.transpose();
+        expect(second).toEqual(first);
     });
 });

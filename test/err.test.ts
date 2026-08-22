@@ -1,5 +1,5 @@
 import { assert } from 'conditional-type-checks';
-import { Err, ErrImpl, None, Ok, Result, Some } from '../src/index.js';
+import { Err, ErrImpl, None, Ok, Result, Some, SomeImpl } from '../src/index.js';
 import { eq, expect_never } from './util.js';
 
 test('Constructable & Callable', () => {
@@ -220,5 +220,28 @@ describe('Err.collapse', () => {
         expect(Result.isResult(result.unwrap())).toBe(true);
         const inner = result.unwrap() as Result<unknown, string>;
         expect(inner.isErr()).toBe(true);
+    });
+});
+//====
+describe('ErrImpl', () => {
+    test('transposes Err to Some(Err)', () => {
+        const err = Err('oops');
+        const result = err.transpose();
+        expect(result).toBeInstanceOf(SomeImpl);
+        expect(result.unwrap()).toBeInstanceOf(ErrImpl);
+        expect(result.unwrap()).toMatchResult(Err('oops'));
+    });
+
+    test('preserves error value', () => {
+        const err = Err(404) as Result<number, number>;
+        const result = err.transpose();
+        expect(result.unwrap()).toMatchResult(Err(404));
+    });
+
+    test('is idempotent (calling again does nothing new)', () => {
+        const err = Err('fail');
+        const first = err.transpose(); // Some(Err('fail'))
+        const second = first.unwrap().transpose(); // transpose on Err -> Some(Err('fail'))
+        expect(second).toEqual(first); // same structure
     });
 });
