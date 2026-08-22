@@ -147,7 +147,62 @@ interface BaseOption<T> extends Iterable<T> {
      * const some2 = Some(Some(Some(4))); // evaluates to Some(Some(4)).
      * ```
      */
-    flatten(): Option<T>;
+    flatten<U = T>(): Option<U>;
+    /**
+     * Recursively flattens nested `Option` types to a specified depth or completely.
+     *
+     * Unlike `flatten()` which only removes one layer of nesting, `collapse()` can remove
+     * multiple layers at once, making it useful for working with deeply nested optional values.
+     *
+     * @param depth - Number of nesting levels to remove (default: `Infinity`)
+     *   - If `depth = 0`, returns `this` unchanged
+     *   - If `depth = 1`, equivalent to `flatten()`
+     *   - If `depth` is omitted or `Infinity`, flattens all layers completely
+     *   - Negative depths return `this` unchanged
+     *
+     * @returns `Option<U>` where `U` is the innermost non-`Option` type
+     *
+     * @example
+     * // Basic flattening
+     * const nested = Some(Some(Some(5)));
+     * nested.collapse()     // Some(5) - flattens all layers
+     * nested.collapse(1)    // Some(Some(5)) - one layer removed
+     * nested.collapse(2)    // Some(5) - two layers removed
+     *
+     * @example
+     * // Handling None values
+     * Some(None).collapse()       // None
+     * Some(Some(None)).collapse() // None
+     * Some(Some(None)).collapse(1) // Some(None) - partial flatten
+     *
+     * @example
+     * // Non-nested values become None (flatten removes the only layer)
+     * Some(42).collapse()    // None
+     * Some(42).collapse(0)   // Some(42) - preserve with depth 0
+     *
+     * @example
+     * // Type inference for chaining
+     * const result = Some(Some(Some(10)))
+     *   .collapse()
+     *   .map(x => x * 2);     // x inferred as number ✅
+     * // result: Some(20)
+     *
+     * @example
+     * // Infinite depth (default behavior)
+     * const deeplyNested = Some(Some(Some(Some(Some("hello")))));
+     * deeplyNested.collapse() // Some("hello")
+     *
+     * @example
+     * // Works with mixed types - stops at first non-Option
+     * const mixed = Some(Some({ value: 5 }));
+     * mixed.collapse()  // Some({ value: 5 }) - stops because object is not Option
+     * mixed.collapse(1) // Some({ value: 5 }) - same result
+     *
+     * @see flatten - Removes only one layer of nesting
+     * @see andThen - For chaining operations that return Options
+     */
+    collapse<U = DeepInner<T>>(depth: number): Option<U>;
+
     /**
      * Maps an `Option<T>` to a `Result<T, E>`.
      */
@@ -226,8 +281,11 @@ class NoneImpl implements BaseOption<never> {
     filter(f?: (v: never) => boolean): None {
         return None;
     }
-    flatten(): Option<never> {
-        return None;
+    flatten<U = never>(): Option<U> {
+        return this;
+    }
+    collapse<U = never>(depth?: number): Option<U> {
+        return this;
     }
     toResult<E>(error: E): ErrImpl<E> {
         return Err(error);
@@ -327,11 +385,23 @@ export class SomeImpl<T> implements BaseOption<T> {
     filter(f: (v: T) => boolean): Option<T> {
         return f(this.value) ? this : None;
     }
-    flatten(): Option<T> {
-        if (this.value instanceof SomeImpl || this.value instanceof NoneImpl) {
-            return this.value as Option<T>;
+    flatten<U = T>(): Option<U> {
+        if (Option.isOption(this.value)) {
+            return this.value;
         }
         return None;
+    }
+    collapse<U = DeepInner<T>>(depth: number = Infinity): Option<U> {
+        if (depth <= 0) return this as unknown as Option<U>;
+        let result = this.flatten() as Option<unknown>;
+        let remaining = depth - 1;
+
+        while (remaining > 0 && result.isSome() && Option.isOption(result.unwrap())) {
+            result = result.flatten();
+            remaining--;
+        }
+
+        return result as Option<U>;
     }
     toResult<E>(error?: E): OkImpl<T> {
         return Ok(this.value);
@@ -357,7 +427,7 @@ export type OptionSomeType<T extends Option<any>> = T extends SomeImpl<infer U> 
 export type OptionSomeTypes<T extends Option<any>[]> = {
     [key in keyof T]: T[key] extends Option<any> ? OptionSomeType<T[key]> : never;
 };
-
+type DeepInner<T> = T extends Option<infer U> ? DeepInner<U> : T;
 export namespace Option {
     /**
      * Parse a set of `Option`s, returning an array of all `Some` values.

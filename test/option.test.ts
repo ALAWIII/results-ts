@@ -372,3 +372,109 @@ test('flatten on non-nested Some returns None', () => {
 test('flatten on None returns None', () => {
     expect(None.flatten()).toBe(None);
 });
+//=================== collapse
+
+// Basic flattening
+test('collapse with no depth flattens all layers', () => {
+    const some = Some(Some(Some(4)));
+    expect(some.collapse()).toEqual(Some(4));
+});
+
+test('collapse with depth 0 returns original', () => {
+    const some = Some(Some(4));
+    expect(some.collapse(0)).toEqual(Some(Some(4)));
+});
+
+test('collapse with depth 1 flattens one layer', () => {
+    const some = Some(Some(Some(4)));
+    expect(some.collapse(1)).toEqual(Some(Some(4)));
+});
+
+test('collapse with depth 2 flattens two layers', () => {
+    const some = Some(Some(Some(4)));
+    expect(some.collapse(2)).toEqual(Some(4));
+});
+
+// None handling
+test('collapse on None returns None', () => {
+    expect(None.collapse()).toBe(None);
+    expect(None.collapse(5)).toBe(None);
+    expect(None.collapse(0)).toBe(None);
+});
+
+// Some(None) cases
+test('collapse flattens Some(None) to None', () => {
+    const some = Some(None);
+    expect(some.collapse()).toBe(None);
+    expect(some.collapse(1)).toBe(None);
+});
+
+test('collapse Some(Some(None)) to None', () => {
+    const some = Some(Some(None));
+    expect(some.collapse()).toBe(None);
+    expect(some.collapse(1)).toEqual(Some(None));
+});
+
+// Non-nested values
+test('collapse on non-nested Some returns None', () => {
+    const some = Some(5);
+    expect(some.collapse()).toBe(None);
+    expect(some.collapse(1)).toBe(None);
+});
+
+test('collapse on Some(undefined) returns None', () => {
+    const some = Some(undefined);
+    expect(some.collapse()).toBe(None);
+});
+
+test('collapse on Some(null) returns None', () => {
+    const some = Some(null);
+    expect(some.collapse()).toBe(None);
+});
+
+// Deep nesting
+test('collapse flattens deeply nested options', () => {
+    const some = Some(Some(Some(Some(Some(5)))));
+    expect(some.collapse()).toEqual(Some(5));
+});
+
+test('collapse with depth greater than nesting levels', () => {
+    const some = Some(Some(4));
+    expect(some.collapse(10)).toEqual(Some(4));
+});
+
+// Mixed types
+test('collapse stops at non-Option value', () => {
+    const some = Some(Some({ value: 5 }));
+    expect(some.collapse()).toEqual(Some({ value: 5 }));
+});
+
+test('collapse with depth stops at non-Option', () => {
+    const some = Some(Some({ value: 5 }));
+    expect(some.collapse(1)).toEqual(Some({ value: 5 }));
+});
+
+// Edge cases
+test('collapse with negative depth throws or handles gracefully', () => {
+    const some = Some(Some(4));
+    expect(some.collapse(-1)).toEqual(some); // or throw
+});
+
+test('collapse with Infinity depth', () => {
+    const some = Some(Some(Some(4)));
+    expect(some.collapse(Infinity)).toEqual(Some(4));
+});
+
+// Chainability
+test('collapse returns Option type for chaining', () => {
+    const result = Some(Some(Some(4)))
+        .collapse()
+        .map((x) => x * 2);
+    expect(result).toEqual(Some(8));
+});
+
+// Identity
+test('collapse on already flat Some returns None', () => {
+    const some = Some(Some(4)).collapse(); // Some(4)
+    expect(some.collapse()).toBe(None); // Not Some(4)!
+});
