@@ -5,11 +5,22 @@ import { Result, Ok, Err, ErrImpl, OkImpl } from './result.js';
 interface BaseOption<T> extends Iterable<T> {
     /** `true` when the Option is Some */
     isSome(): this is SomeImpl<T>;
-
+    /**
+     * @returns `true` if the `option` is a `Some` and the value inside of it matches a `predicate`.
+     * @example
+     * const some = Some(5);
+     * some.isSomeAnd((v) => v > 4); // true
+     * some.isSomeAnd((v) => v < 0); // false
+     *
+     * const none = None;
+     * none.isSomeAnd(); // false
+     * none.isSomeAnd(() => true); //false
+     */
+    isSomeAnd(f: (v: T) => boolean): boolean;
     /** `true` when the Option is None */
     isNone(): this is None;
     /**
-     * @returns `true` if the option is a `None` or the value inside of it matches a `predicate`.
+     * @returns `true` if the `option` is a `None` or the value inside of it matches a `predicate`.
      * @example
      * const some = Some(5);
      * some.isNoneOr((v) => v > 4); // true
@@ -235,7 +246,9 @@ class NoneImpl implements BaseOption<never> {
     isSome(): this is SomeImpl<never> {
         return false;
     }
-
+    isSomeAnd(_f?: (v: never) => boolean): boolean {
+        return false;
+    }
     isNone(): this is NoneImpl {
         return true;
     }
@@ -345,7 +358,9 @@ export class SomeImpl<T> implements BaseOption<T> {
     isSome(): this is SomeImpl<T> {
         return true;
     }
-
+    isSomeAnd(f: (v: T) => boolean): boolean {
+        return f(this.value);
+    }
     isNone(): this is NoneImpl {
         return false;
     }

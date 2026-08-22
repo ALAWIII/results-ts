@@ -490,3 +490,15 @@ test('Option.isNoneOr called on Some(T)', () => {
     expect(some.isNoneOr((v) => v > 4)).toBe(true);
     expect(some.isNoneOr((v) => v < 0)).toBe(false);
 });
+//==================== isSomeAnd
+
+test('Option.isSomeAnd called on None should be false', () => {
+    const none = None;
+    expect(none.isSomeAnd()).toBe(false);
+    expect(none.isSomeAnd(() => true)).toBe(false);
+});
+test('Option.isSomeAnd called on Some(T)', () => {
+    const some = Some(5);
+    expect(some.isSomeAnd((v) => v > 4)).toBe(true);
+    expect(some.isSomeAnd((v) => v < 0)).toBe(false);
+});
