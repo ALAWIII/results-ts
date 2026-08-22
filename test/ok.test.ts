@@ -157,3 +157,49 @@ test('Ok.and', () => {
     expect(ok.and(Ok(3)).unwrap()).toBe(3);
     expect(ok.and(Err(4)).err().unwrap()).toBe(4);
 });
+//===============
+describe('Ok.flatten', () => {
+    test('should return inner Ok value when Ok contains Ok', () => {
+        const ok = Ok(Ok(42)).flatten();
+        expect(ok).toMatchResult(Ok(42));
+    });
+
+    test('should return inner Err when Ok contains Err', () => {
+        const ok = Ok(Err('fail')).flatten();
+        expect(ok).toMatchResult(Err('fail'));
+    });
+
+    test('should return Ok of value when Ok contains non-Result', () => {
+        const ok = Ok(42).flatten();
+        expect(ok).toMatchResult(Ok(42));
+    });
+
+    test('should return Ok of string when Ok contains string', () => {
+        const ok = Ok('hello').flatten();
+        expect(ok).toMatchResult(Ok('hello'));
+    });
+
+    test('should return Ok of object when Ok contains object', () => {
+        const obj = { a: 1, b: 2 };
+        const ok = Ok(obj).flatten();
+        expect(ok).toMatchResult(Ok(obj));
+    });
+
+    test('should handle nested Ok multiple levels deep', () => {
+        const ok = Ok(Ok(Ok(42))).flatten();
+        expect(ok).toMatchResult(Ok(Ok(42)));
+    });
+
+    test('should preserve generic types', () => {
+        const ok = Ok(Ok(42));
+        const flattened = ok.flatten<number, string>();
+        expect(flattened.unwrap()).toBe(42);
+    });
+
+    test('should work with mixed nested types', () => {
+        const ok = Ok(Ok(Err('deep fail')))
+            .flatten()
+            .flatten();
+        expect(ok).toMatchResult(Err('deep fail'));
+    });
+});

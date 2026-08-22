@@ -346,6 +346,47 @@ interface BaseResult<T, E> extends Iterable<T> {
      * ```
      */
     inspectErr(f: (v: E) => void): Result<T, E>;
+    /**
+     * Flattens a nested Result structure.
+     *
+     * When a Result contains another Result as its value, `flatten()` extracts the inner Result,
+     * effectively collapsing `Result<Result<T, E>, E>` into `Result<T, E>`.
+     *
+     * **Type Parameters:**
+     * - `U = T`: The success type of the inner Result if it exists
+     * - `E2 = E`: The error type of the inner Result if it exists
+     *
+     * **Returns:** `Result<U | T, E | E2>`
+     * - If `Ok` contains another `Result`, returns the inner Result directly
+     * - If `Ok` contains a non-Result value `T`, returns `Ok<T>`
+     * - If `Err`, returns itself unchanged (Err is terminal)
+     *
+     * **Use Cases:**
+     * - Working with APIs that return `Result` within `Result`
+     * @example
+     * // Basic flattening - Ok contains Ok
+     * const result = Ok(Ok(42)).flatten();
+     * console.log(result.unwrap()); // 42
+     *
+     * @example
+     * // Flattening with nested Err
+     * const result = Ok(Err('database error')).flatten();
+     * console.log(result.unwrapErr()); // 'database error'
+     *
+     * @example
+     * // No-op on non-nested values
+     * const result = Ok(42).flatten();
+     * console.log(result.unwrap()); // 42
+     *
+     * @example
+     * // Err is returned unchanged
+     * const result = Err('failure').flatten();
+     * console.log(result.unwrapErr()); // 'failure'
+     *
+     * @see {@link andThen} for chaining operations without flattening
+     * @see {@link map} for transforming the success value
+     */
+    flatten<U = T, E2 = E>(): Result<U | T, E | E2>;
 }
 
 /**
@@ -459,6 +500,9 @@ export class ErrImpl<E> implements BaseResult<never, E> {
     }
     inspectErr(f: (v: E) => void): Result<never, E> {
         f(this.error);
+        return this;
+    }
+    flatten<U = never, E2 = E>(): Result<U, E | E2> {
         return this;
     }
 }
@@ -577,6 +621,12 @@ export class OkImpl<T> implements BaseResult<T, never> {
         return this;
     }
     inspectErr(_f?: (v: never) => void): Result<T, never> {
+        return this;
+    }
+    flatten<U, E2>(): Result<T | U, E2> {
+        if (Result.isResult(this.value)) {
+            return this.value;
+        }
         return this;
     }
 }

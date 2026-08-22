@@ -159,3 +159,29 @@ test('Err.and', () => {
     expect(err.and(Err(4)).err().unwrap()).toBe(2);
     expect(err.and()).toBe(err);
 });
+
+describe('Err.flatten', () => {
+    test('should return Err directly', () => {
+        const err = Err('fail').flatten<number>();
+        expect(err).toMatchResult(Err('fail'));
+    });
+
+    test('should preserve error type when flattening', () => {
+        const err = Err(42).flatten<number, string>();
+        expect(err.unwrapErr()).toBe(42);
+    });
+
+    test('should work with nested Err of different type', () => {
+        const err = Err(Err(42));
+        const flattened = err.flatten();
+        expect(flattened.unwrapErr()).toMatchResult(Err(42));
+    });
+
+    test('should not flatten the error value', () => {
+        const nested = Err(Err('deep'));
+        const flattened = nested.flatten();
+        expect(flattened).toMatchResult(nested);
+        expect(flattened.isErr()).toBe(true);
+        expect(flattened.unwrapErr().isErr()).toBe(true);
+    });
+});
