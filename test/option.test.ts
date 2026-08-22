@@ -349,3 +349,26 @@ test('Some.filter', () => {
     const someFilter2 = Some(4).filter(isEven);
     expect(someFilter2).toEqual(Some(4));
 });
+test('flatten removes one layer from Some(Some(T))', () => {
+    const some = Some(Some(4));
+    expect(some.flatten()).toEqual(Some(4));
+});
+
+test('flatten removes one layer from Some(Some(Some(4)))', () => {
+    const some = Some(Some(Some(4)));
+    expect(some.flatten()).toEqual(Some(Some(4)));
+});
+
+test('flatten converts Some(None) to None', () => {
+    const some = Some(None);
+    expect(some.flatten()).toBe(None);
+});
+
+test('flatten on non-nested Some returns None', () => {
+    const some = Some(5);
+    expect(some.flatten()).toBe(None);
+});
+
+test('flatten on None returns None', () => {
+    expect(None.flatten()).toBe(None);
+});

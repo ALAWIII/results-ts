@@ -132,6 +132,11 @@ interface BaseOption<T> extends Iterable<T> {
      * ```
      */
     filter(f: (v: T) => boolean): Option<T>;
+
+    /**
+     * Converts from `Option<Option<T>>` to `Option<T>`.
+     */
+    flatten(): Option<T>;
     /**
      * Maps an `Option<T>` to a `Result<T, E>`.
      */
@@ -208,6 +213,9 @@ class NoneImpl implements BaseOption<never> {
         return None;
     }
     filter(f?: (v: never) => boolean): None {
+        return None;
+    }
+    flatten(): Option<never> {
         return None;
     }
     toResult<E>(error: E): ErrImpl<E> {
@@ -307,6 +315,12 @@ export class SomeImpl<T> implements BaseOption<T> {
     }
     filter(f: (v: T) => boolean): Option<T> {
         return f(this.value) ? this : None;
+    }
+    flatten(): Option<T> {
+        if (this.value instanceof SomeImpl || this.value instanceof NoneImpl) {
+            return this.value as Option<T>;
+        }
+        return None;
     }
     toResult<E>(error?: E): OkImpl<T> {
         return Ok(this.value);
