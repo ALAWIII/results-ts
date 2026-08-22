@@ -211,6 +211,11 @@ describe('Ok.collapse', () => {
         const ok = Ok(42).collapse();
         expect(ok).toMatchResult(Ok(42));
     });
+    test('should correctly infer the type after success flatten', () => {
+        const ok = Ok(Ok(Ok(Ok(42)))).collapse(2);
+        expect(ok).toMatchResult(Ok(Ok(42)));
+        eq<Result<Ok<number>, never>, typeof ok>(true);
+    });
 
     test('should flatten single level with depth 0', () => {
         const ok = Ok(Ok(42)).collapse(0);
@@ -232,7 +237,7 @@ describe('Ok.collapse', () => {
         const result = ok.collapse(2);
         expect(result.isOk()).toBe(true);
         expect(Result.isResult(result.unwrap())).toBe(true);
-        const inner = result.unwrap() as Result<unknown, unknown>;
+        const inner = result.unwrap();
         expect(inner.unwrap()).toBe(42);
     });
 
@@ -243,7 +248,7 @@ describe('Ok.collapse', () => {
     });
 
     test('should preserve generic types', () => {
-        const ok = Ok(Ok(Ok(42))) as Result<Result<Result<number, string>, string>, never>;
+        const ok = Ok(Ok(Ok(42)));
         const result = ok.collapse<number, string>(2);
         expect(result.unwrap()).toBe(42);
     });
@@ -261,7 +266,7 @@ describe('Ok.collapse', () => {
 
     test('should handle Infinity depth', () => {
         const ok = Ok(Ok(Ok(Ok(Ok(42)))));
-        const result = ok.collapse(Infinity);
+        const result = ok.collapse();
         expect(result).toMatchResult(Ok(42));
     });
 
@@ -280,9 +285,14 @@ describe('Ok.collapse', () => {
     test('should handle nested Result with different types', () => {
         type Outer = string;
         type Inner = number;
-        const ok = Ok(Ok(Ok(42))) as Result<Result<Result<Inner, string>, string>, Outer>;
+        const ok = Ok(Ok(Ok(42)));
         const result = ok.collapse<Inner, string>(2);
         expect(result.unwrap()).toBe(42);
+    });
+    test('should handle nested Result with negative depth values.', () => {
+        const ok = Ok(Ok(Ok(42)));
+        const result = ok.collapse(-1);
+        expect(result).toMatchResult(ok);
     });
 });
 //====

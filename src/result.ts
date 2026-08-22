@@ -437,7 +437,8 @@ interface BaseResult<T, E> extends Iterable<T> {
      * @see {@link flatten} - For single-level flattening
      * @see {@link andThen} - For chaining operations
      */
-    collapse<U = T, E2 = E>(depth: number): Result<U | T, E | E2>;
+    collapse<U = DeepInner<T>, E2 = E>(): Result<U, E | E2>;
+    collapse<D extends number, U = DeepInnerN<T, D>, E2 = E>(depth: D): Result<U, E | E2>;
     /**
      * Transposes a `Result` of an `Option` into an `Option` of a `Result`.
      *
@@ -611,8 +612,10 @@ export class ErrImpl<E> implements BaseResult<never, E> {
     flatten<U = never, E2 = E>(): Result<U, E | E2> {
         return this;
     }
-    collapse<U = never, E2 = E>(_depth?: number): Result<U, E | E2> {
-        return this;
+    collapse<U = never, E2 = E>(): Result<U, E | E2>;
+    collapse<D extends number, U = never, E2 = E>(depth: D): Result<U, E | E2>;
+    collapse(_depth?: number): Result<never, E> {
+        return this as any;
     }
     transpose<T2 = never, E2 = E>(): Option<Result<T2, E>> {
         return Some(Err(this.error));
@@ -735,21 +738,23 @@ export class OkImpl<T> implements BaseResult<T, never> {
     inspectErr(_f?: (v: never) => void): Result<T, never> {
         return this;
     }
-    flatten<U, E2>(): Result<T | U, E2> {
+    flatten<U = T, E2 = never>(): Result<T | U, E2> {
         if (Result.isResult(this.value)) {
             return this.value;
         }
         return this;
     }
-    collapse<U = T, E2 = never>(depth: number = Infinity): Result<T | U, E2> {
+    collapse<U = DeepInner<T>, E2 = never>(): Result<U, E2>;
+    collapse<D extends number, U = DeepInnerN<T, D>, E2 = never>(depth: D): Result<U, E2>;
+    collapse(depth: number = Infinity): Result<any, any> {
         if (depth <= 0) return this;
-        let result = this.flatten();
+        let result: Result<any, any> = this.flatten();
         let remaining = depth - 1;
         while (remaining > 0 && result.isOk() && Result.isResult(result.unwrap())) {
             result = result.flatten();
             remaining--;
         }
-        return result as Result<T | U, E2>;
+        return result;
     }
     transpose<T2 = UnwrapOption<T>, E2 = never>(): Option<Result<T2, E2>> {
         if (!Option.isOption(this.value)) {
@@ -763,6 +768,18 @@ export class OkImpl<T> implements BaseResult<T, never> {
         return Some(Ok(opt.unwrap()));
     }
 }
+type IsNonPositive<D extends number> = `${D}` extends `-${string}` ? true : D extends 0 ? true : false;
+// Full flatten (no depth bound) — used when no depth arg is given
+type DeepInner<T> = T extends Result<infer U, any> ? DeepInner<U> : T;
+// Bounded flatten — recursion count tracked in the Acc tuple, mirrors the runtime loop
+type DeepInnerN<T, D extends number, Acc extends unknown[] = []> =
+    IsNonPositive<D> extends true
+        ? T
+        : Acc['length'] extends D
+          ? T
+          : T extends Result<infer U, any>
+            ? DeepInnerN<U, D, [...Acc, unknown]>
+            : T;
 type UnwrapOption<T> = T extends Option<infer U> ? U : T;
 export type Ok<T> = OkImpl<T>;
 
