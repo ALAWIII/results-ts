@@ -502,3 +502,12 @@ test('Option.isSomeAnd called on Some(T)', () => {
     expect(some.isSomeAnd((v) => v > 4)).toBe(true);
     expect(some.isSomeAnd((v) => v < 0)).toBe(false);
 });
+//=============== okOrElse
+
+test('Option.okOrElse called on Some should return Ok.', () => {
+    expect(Some(6).okOrElse(() => 'err')).toMatchResult(Ok(6));
+});
+
+test('Option.okOrElse called on None should return Err.', () => {
+    expect(None.okOrElse(() => 'err')).toMatchResult(Err('err'));
+});

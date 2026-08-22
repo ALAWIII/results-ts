@@ -227,10 +227,21 @@ interface BaseOption<T> extends Iterable<T> {
     collapse<U = DeepInner<T>>(depth: number): Option<U>;
 
     /**
-     * Maps an `Option<T>` to a `Result<T, E>`.
+     * Transforms the `Option<T>` into a `Result<T, E>`, mapping `Some(v)` to `Ok(v)` and `None` to `Err(err)`.
      */
-    okOr<E>(error: E): Result<T, E>;
+    okOr<E>(err: E): Result<T, E>;
 
+    /**
+     * Transforms the `Option<T>` into a `Result<T, E>`, mapping `Some(v)` to `Ok(v)` and `None` to `Err(err())`.
+     * @example
+     * const errFun = ()=> 'your error';
+     *
+     * const some = Some(6).okOrElse(errFun); // evaluates to Some(6)
+     *
+     * const none = None.okOrElse(errFun); // evaluates to Err('err')
+     *
+     */
+    okOrElse<E>(err: () => E): Result<T, E>;
     /**
      * Creates an `AsyncOption` based on this `Option`.
      *
@@ -317,7 +328,9 @@ class NoneImpl implements BaseOption<never> {
     okOr<E>(error: E): ErrImpl<E> {
         return Err(error);
     }
-
+    okOrElse<E>(err: () => E): Result<never, E> {
+        return Err(err());
+    }
     toString(): string {
         return 'None';
     }
@@ -433,7 +446,9 @@ export class SomeImpl<T> implements BaseOption<T> {
     okOr<E>(error?: E): OkImpl<T> {
         return Ok(this.value);
     }
-
+    okOrElse<E>(err?: () => E): Result<T, E> {
+        return Ok(this.value);
+    }
     toAsyncOption(): AsyncOption<T> {
         return new AsyncOption(this);
     }
