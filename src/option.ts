@@ -8,7 +8,19 @@ interface BaseOption<T> extends Iterable<T> {
 
     /** `true` when the Option is None */
     isNone(): this is None;
-
+    /**
+     * @returns `true` if the option is a `None` or the value inside of it matches a `predicate`.
+     * @example
+     * const some = Some(5);
+     * some.isNoneOr((v) => v > 4); // true
+     * some.isNoneOr((v) => v < 0); // false
+     *
+     * const none = None;
+     * none.isNoneOr(); // true
+     * none.isNoneOr(() => false); // true
+     *
+     */
+    isNoneOr(f: (v: T) => boolean): boolean;
     /**
      * Returns the contained `Some` value, if exists.  Throws an error if not.
      *
@@ -227,7 +239,9 @@ class NoneImpl implements BaseOption<never> {
     isNone(): this is NoneImpl {
         return true;
     }
-
+    isNoneOr(_f?: (v: never) => boolean): boolean {
+        return true;
+    }
     [Symbol.iterator](): Iterator<never, never, any> {
         return {
             next(): IteratorResult<never, never> {
@@ -318,6 +332,15 @@ export class SomeImpl<T> implements BaseOption<T> {
      * ```
      */
     static readonly EMPTY = new SomeImpl<void>(undefined);
+    readonly value!: T;
+
+    [Symbol.iterator](): Iterator<T> {
+        return [this.value][Symbol.iterator]();
+    }
+
+    constructor(val: T) {
+        this.value = val;
+    }
 
     isSome(): this is SomeImpl<T> {
         return true;
@@ -326,19 +349,8 @@ export class SomeImpl<T> implements BaseOption<T> {
     isNone(): this is NoneImpl {
         return false;
     }
-
-    readonly value!: T;
-
-    [Symbol.iterator](): Iterator<T> {
-        return [this.value][Symbol.iterator]();
-    }
-
-    constructor(val: T) {
-        if (!(this instanceof SomeImpl)) {
-            return new SomeImpl(val);
-        }
-
-        this.value = val;
+    isNoneOr(f: (v: T) => boolean): boolean {
+        return f(this.value);
     }
 
     unwrapOr(_val?: unknown): T {

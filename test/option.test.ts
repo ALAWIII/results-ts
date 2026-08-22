@@ -478,3 +478,15 @@ test('collapse on already flat Some returns None', () => {
     const some = Some(Some(4)).collapse(); // Some(4)
     expect(some.collapse()).toBe(None); // Not Some(4)!
 });
+//==================== isNoneOr
+
+test('Option.isNoneOr called on None should be true', () => {
+    const none = None;
+    expect(none.isNoneOr()).toBe(true);
+    expect(none.isNoneOr(() => false)).toBe(true);
+});
+test('Option.isNoneOr called on Some(T)', () => {
+    const some = Some(5);
+    expect(some.isNoneOr((v) => v > 4)).toBe(true);
+    expect(some.isNoneOr((v) => v < 0)).toBe(false);
+});
