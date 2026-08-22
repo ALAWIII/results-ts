@@ -158,13 +158,13 @@ interface BaseOption<T> extends Iterable<T> {
 
     /**
      * Converts from `Option<Option<T>>` to `Option<T>`.
-     * @returns `None` if `this` is `None`, `Some(None)` or direct `Some(T)` where `T` is not `Option<U>`.
-     * @returns `Some(T)` if `this` is `Some(Some(T))`.
+     * @returns `None` if `this` is `None`, `Some(None)`.
+     * @returns `Some(T)` if `this` is `Some(T)` or `Some(Some(T))`.
      * @example
      *```typescript
      * const none1 = None.flatten(); // evaluates to None.
      * const none2 = Some(None).flatten(); // evaluates to None.
-     * const none3 = Some(5).flatten(); // evaluates to None.
+     * const none3 = Some(5).flatten(); // evaluates to Some(5).
      *
      * const some1 = Some(Some(4)); // evaluates to Some(4).
      * const some2 = Some(Some(Some(4))); // evaluates to Some(Some(4)).
