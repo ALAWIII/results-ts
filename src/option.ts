@@ -395,13 +395,13 @@ class NoneImpl implements BaseOption<never> {
     and<U>(_optb?: Option<U>): Option<U> {
         return None;
     }
-    filter(f?: (v: never) => boolean): None {
+    filter(_f?: (v: never) => boolean): None {
         return None;
     }
     flatten<U = never>(): Option<U> {
         return this;
     }
-    collapse<U = never>(depth?: number): Option<U> {
+    collapse<U = never>(_depth?: number): Option<U> {
         return this;
     }
     okOr<E>(error: E): ErrImpl<E> {
@@ -528,10 +528,10 @@ export class SomeImpl<T> implements BaseOption<T> {
 
         return result as Option<U>;
     }
-    okOr<E>(error?: E): OkImpl<T> {
+    okOr<E>(_error?: E): OkImpl<T> {
         return Ok(this.value);
     }
-    okOrElse<E>(err?: () => E): Result<T, E> {
+    okOrElse<E>(_err?: () => E): Result<T, E> {
         return Ok(this.value);
     }
     xor(other: Option<T>): Option<T> {
