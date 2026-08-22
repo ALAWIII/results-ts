@@ -2,14 +2,34 @@ import { toString } from './utils.js';
 import { Option, None, Some } from './option.js';
 import { AsyncResult } from './asyncresult.js';
 
-/*
- * Missing Rust Result type methods:
- * pub fn contains<U>(&self, x: &U) -> bool
- * pub fn contains_err<F>(&self, f: &F) -> bool
- * pub fn and<U>(self, res: Result<U, E>) -> Result<U, E>
- * pub fn expect_err(self, msg: &str) -> E
- * pub fn unwrap_or_default(self) -> T
+/**
+ * used in collapse implementations.
  */
+type IsNonPositive<D extends number> = `${D}` extends `-${string}` ? true : D extends 0 ? true : false;
+// Full flatten (no depth bound) — used when no depth arg is given
+type DeepInner<T> = T extends Result<infer U, any> ? DeepInner<U> : T;
+// Bounded flatten — recursion count tracked in the Acc tuple, mirrors the runtime loop
+type DeepInnerN<T, D extends number, Acc extends unknown[] = []> =
+    IsNonPositive<D> extends true
+        ? T
+        : Acc['length'] extends D
+          ? T
+          : T extends Result<infer U, any>
+            ? DeepInnerN<U, D, [...Acc, unknown]>
+            : T;
+/**
+ * used in flatten implementation.
+ */
+type FlattenResult<T, E2> = [T] extends [OkImpl<infer U>]
+    ? Result<U, E2>
+    : [T] extends [ErrImpl<infer E>]
+      ? Result<never, E | E2>
+      : Result<T, E2>;
+/**
+ * used in transpose implementation.
+ */
+type UnwrapOption<T> = T extends Option<infer U> ? U : T;
+//================
 interface BaseResult<T, E> extends Iterable<T> {
     /** `true` when the result is Ok */
     isOk(): this is OkImpl<T>;
@@ -386,7 +406,7 @@ interface BaseResult<T, E> extends Iterable<T> {
      * @see {@link andThen} for chaining operations without flattening
      * @see {@link map} for transforming the success value
      */
-    flatten<U = T, E2 = E>(): Result<U | T, E | E2>;
+    flatten<E2 = never>(): FlattenResult<T, E | E2>;
 
     /**
      * Recursively flattens nested Results up to a specified depth.
@@ -609,7 +629,8 @@ export class ErrImpl<E> implements BaseResult<never, E> {
         f(this.error);
         return this;
     }
-    flatten<U = never, E2 = E>(): Result<U, E | E2> {
+    flatten<E2 = never>(): Result<never, E | E2>;
+    flatten(): Result<never, E> {
         return this;
     }
     collapse<U = never, E2 = E>(): Result<U, E | E2>;
@@ -738,11 +759,9 @@ export class OkImpl<T> implements BaseResult<T, never> {
     inspectErr(_f?: (v: never) => void): Result<T, never> {
         return this;
     }
-    flatten<U = T, E2 = never>(): Result<T | U, E2> {
-        if (Result.isResult(this.value)) {
-            return this.value;
-        }
-        return this;
+    flatten<E2 = never>(): FlattenResult<T, E2>;
+    flatten(): Result<any, any> {
+        return Result.isResult(this.value) ? this.value : this;
     }
     collapse<U = DeepInner<T>, E2 = never>(): Result<U, E2>;
     collapse<D extends number, U = DeepInnerN<T, D>, E2 = never>(depth: D): Result<U, E2>;
@@ -768,19 +787,7 @@ export class OkImpl<T> implements BaseResult<T, never> {
         return Some(Ok(opt.unwrap()));
     }
 }
-type IsNonPositive<D extends number> = `${D}` extends `-${string}` ? true : D extends 0 ? true : false;
-// Full flatten (no depth bound) — used when no depth arg is given
-type DeepInner<T> = T extends Result<infer U, any> ? DeepInner<U> : T;
-// Bounded flatten — recursion count tracked in the Acc tuple, mirrors the runtime loop
-type DeepInnerN<T, D extends number, Acc extends unknown[] = []> =
-    IsNonPositive<D> extends true
-        ? T
-        : Acc['length'] extends D
-          ? T
-          : T extends Result<infer U, any>
-            ? DeepInnerN<U, D, [...Acc, unknown]>
-            : T;
-type UnwrapOption<T> = T extends Option<infer U> ? U : T;
+
 export type Ok<T> = OkImpl<T>;
 
 export function Ok<T>(val: T): OkImpl<T> {

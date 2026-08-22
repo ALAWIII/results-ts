@@ -162,12 +162,12 @@ test('Err.and', () => {
 
 describe('Err.flatten', () => {
     test('should return Err directly', () => {
-        const err = Err('fail').flatten<number>();
+        const err = Err('fail').flatten();
         expect(err).toMatchResult(Err('fail'));
     });
 
     test('should preserve error type when flattening', () => {
-        const err = Err(42).flatten<number, string>();
+        const err = Err(42).flatten();
         expect(err.unwrapErr()).toBe(42);
     });
 

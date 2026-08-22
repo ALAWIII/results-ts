@@ -159,6 +159,13 @@ test('Ok.and', () => {
 });
 //===============
 describe('Ok.flatten', () => {
+    test('should correctly infer the types after invoking flatten on Ok', () => {
+        const ok = Ok(Ok(42)).flatten();
+        expect(ok).toMatchResult(Ok(42));
+        eq<Result<number, never>, typeof ok>(true);
+        eq<Result<number, unknown>, typeof ok>(false);
+        eq<Result<Ok<number>, never>, typeof ok>(false);
+    });
     test('should return inner Ok value when Ok contains Ok', () => {
         const ok = Ok(Ok(42)).flatten();
         expect(ok).toMatchResult(Ok(42));
@@ -192,8 +199,8 @@ describe('Ok.flatten', () => {
 
     test('should preserve generic types', () => {
         const ok = Ok(Ok(42));
-        const flattened = ok.flatten<number, string>();
-        expect(flattened.unwrap()).toBe(42);
+        const flattened = ok.flatten<string>();
+        eq<Result<number, string>, typeof flattened>(true);
     });
 
     test('should work with mixed nested types', () => {
