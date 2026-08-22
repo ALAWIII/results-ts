@@ -511,3 +511,22 @@ test('Option.okOrElse called on Some should return Ok.', () => {
 test('Option.okOrElse called on None should return Err.', () => {
     expect(None.okOrElse(() => 'err')).toMatchResult(Err('err'));
 });
+//=============== xor
+
+test('Some.xor accepts Some return None', () => {
+    expect(Some(5).xor(Some(6))).toBe(None);
+});
+test('Some.xor accepts None return Some', () => {
+    expect(Some(5).xor(None)).toEqual(Some(5));
+});
+test('None.xor accepts None return None', () => {
+    expect(None.xor(None)).toBe(None);
+});
+test('None.xor accepts Some return Some', () => {
+    expect(None.xor(Some(5))).toEqual(Some(5));
+});
+
+test('Option.xor accepts None return Some', () => {
+    const some = Some(5) as Option<number>;
+    expect(some.xor(None)).toEqual(Some(5));
+});

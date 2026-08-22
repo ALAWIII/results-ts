@@ -245,6 +245,35 @@ interface BaseOption<T> extends Iterable<T> {
      */
     okOrElse<E>(err: () => E): Result<T, E>;
     /**
+     * Returns `Some` if exactly one of `self` or `other` is `Some`, otherwise returns `None`.
+     *
+     * This is the logical exclusive-or (XOR) operation for Options.
+     *
+     * @param other - The other Option to compare with
+     * @returns `Some` containing the value if exactly one Option is `Some`, otherwise `None`
+     *
+     * @example
+     * // Both are Some → returns None
+     * Some(6).xor(Some(4)); // => None
+     *
+     * @example
+     * // Self is Some, other is None → returns self
+     * Some(6).xor(None); // => Some(6)
+     *
+     * @example
+     * // Both are None → returns None
+     * None.xor(None); // => None
+     *
+     * @example
+     * // Self is None, other is Some → returns other
+     * None.xor(Some(5)); // => Some(5)
+     *
+     *
+     * @see {@link and} - Returns None if self is None, otherwise returns other
+     * @see {@link or} - Returns self if Some, otherwise returns other
+     */
+    xor<U = T>(other: Option<U | T>): Option<U | T>;
+    /**
      * Creates an `AsyncOption` based on this `Option`.
      *
      * Useful when you need to compose results with asynchronous code.
@@ -332,6 +361,9 @@ class NoneImpl implements BaseOption<never> {
     }
     okOrElse<E>(err: () => E): Result<never, E> {
         return Err(err());
+    }
+    xor<U = never>(other: Option<U>): Option<U> {
+        return other;
     }
     toString(): string {
         return 'None';
@@ -450,6 +482,9 @@ export class SomeImpl<T> implements BaseOption<T> {
     }
     okOrElse<E>(err?: () => E): Result<T, E> {
         return Ok(this.value);
+    }
+    xor(other: Option<T>): Option<T> {
+        return other.isNone() ? this : None;
     }
     toAsyncOption(): AsyncOption<T> {
         return new AsyncOption(this);
