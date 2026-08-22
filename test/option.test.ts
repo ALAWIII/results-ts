@@ -218,13 +218,13 @@ test('to string', () => {
 
 test('to result', () => {
     const option = Some(1) as Option<number>;
-    const result = option.toResult('error');
+    const result = option.ok_or('error');
     eq<typeof result, Result<number, string>>(true);
 
     expect(result).toMatchResult(Ok(1));
 
     const option2 = None as Option<number>;
-    const result2 = option2.toResult('error');
+    const result2 = option2.ok_or('error');
     eq<typeof result2, Result<number, string>>(true);
 
     expect(result2).toMatchResult(Err('error'));
