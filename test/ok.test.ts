@@ -203,3 +203,85 @@ describe('Ok.flatten', () => {
         expect(ok).toMatchResult(Err('deep fail'));
     });
 });
+
+//=============
+
+describe('Ok.collapse', () => {
+    test('should return Ok directly when non-Result value', () => {
+        const ok = Ok(42).collapse();
+        expect(ok).toMatchResult(Ok(42));
+    });
+
+    test('should flatten single level with depth 0', () => {
+        const ok = Ok(Ok(42)).collapse(0);
+        expect(ok).toMatchResult(Ok(Ok(42)));
+    });
+
+    test('should flatten single level with depth 1', () => {
+        const ok = Ok(Ok(42)).collapse(1);
+        expect(ok).toMatchResult(Ok(42));
+    });
+
+    test('should flatten multiple levels with default depth', () => {
+        const ok = Ok(Ok(Ok(Ok(42)))).collapse();
+        expect(ok).toMatchResult(Ok(42));
+    });
+
+    test('should flatten exactly N levels with depth parameter', () => {
+        const ok = Ok(Ok(Ok(Ok(42))));
+        const result = ok.collapse(2);
+        expect(result.isOk()).toBe(true);
+        expect(Result.isResult(result.unwrap())).toBe(true);
+        const inner = result.unwrap() as Result<unknown, unknown>;
+        expect(inner.unwrap()).toBe(42);
+    });
+
+    test('should stop at Err when encountered', () => {
+        const ok = Ok(Ok(Ok(Err('stop here'))));
+        const result = ok.collapse(5);
+        expect(result).toMatchResult(Err('stop here'));
+    });
+
+    test('should preserve generic types', () => {
+        const ok = Ok(Ok(Ok(42))) as Result<Result<Result<number, string>, string>, never>;
+        const result = ok.collapse<number, string>(2);
+        expect(result.unwrap()).toBe(42);
+    });
+
+    test('should handle mixed nested types', () => {
+        const ok = Ok(Ok(Ok(Err('deep error'))));
+        const result = ok.collapse(3);
+        expect(result).toMatchResult(Err('deep error'));
+    });
+
+    test('should return original Ok when depth is negative', () => {
+        const ok = Ok(Ok(42)).collapse(-1);
+        expect(ok).toMatchResult(Ok(Ok(42)));
+    });
+
+    test('should handle Infinity depth', () => {
+        const ok = Ok(Ok(Ok(Ok(Ok(42)))));
+        const result = ok.collapse(Infinity);
+        expect(result).toMatchResult(Ok(42));
+    });
+
+    test('should stop when reached non-Result value', () => {
+        const ok = Ok(Ok(Ok(42)));
+        const result = ok.collapse(10);
+        expect(result).toMatchResult(Ok(42));
+    });
+
+    test('should work with complex nested structures', () => {
+        const nested = Ok(Ok(Ok(Ok({ data: 'test' }))));
+        const result = nested.collapse();
+        expect(result.unwrap()).toEqual({ data: 'test' });
+    });
+
+    test('should handle nested Result with different types', () => {
+        type Outer = string;
+        type Inner = number;
+        const ok = Ok(Ok(Ok(42))) as Result<Result<Result<Inner, string>, string>, Outer>;
+        const result = ok.collapse<Inner, string>(2);
+        expect(result.unwrap()).toBe(42);
+    });
+});

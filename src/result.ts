@@ -387,6 +387,57 @@ interface BaseResult<T, E> extends Iterable<T> {
      * @see {@link map} for transforming the success value
      */
     flatten<U = T, E2 = E>(): Result<U | T, E | E2>;
+
+    /**
+     * Recursively flattens nested Results up to a specified depth.
+     *
+     * Unlike `flatten()` which only collapses one level, `collapse()` can flatten
+     * multiple nested layers of `Result<Result<Result<T>>>` in one operation.
+     *
+     * **Type Parameters:**
+     * - `U = T`: The success type of inner Results
+     * - `E2 = E`: The error type of inner Results
+     *
+     * **Parameters:**
+     * - `depth: number` (default: `Infinity`): Maximum number of levels to flatten
+     *
+     * **Returns:** `Result<U | T, E | E2>`
+     * - Flattens `depth` levels of nested Results
+     * - Stops early if a non-Result value or `Err` is encountered
+     * - Depth of `0` returns the Result unchanged
+     * - Negative depth returns the Result unchanged
+     * - `Infinity` flattens all the way
+     *
+     * @example
+     * // Flatten all levels (default)
+     * Ok(Ok(Ok(42))).collapse()     // Ok(42)
+     *
+     * @example
+     * // Flatten exactly 2 levels
+     * Ok(Ok(Ok(Ok(42)))).collapse(2) // Ok(Ok(42))
+     *
+     * @example
+     * // No flattening
+     * Ok(Ok(42)).collapse(0)         // Ok(Ok(42))
+     *
+     * @example
+     * // Stops at Err
+     * Ok(Ok(Err('fail'))).collapse() // Err('fail')
+     *
+     * @example
+     * // Stops at non-Result
+     * Ok(Ok(42)).collapse(5)         // Ok(42) - 42 isn't a Result
+     *
+     * @example
+     * // Mixed depths
+     * const data = Ok(Ok(Ok(Ok({ id: 1 }))));
+     * data.collapse(1) // Ok(Ok(Ok({ id: 1 })))
+     * data.collapse(3) // Ok({ id: 1 })
+     *
+     * @see {@link flatten} - For single-level flattening
+     * @see {@link andThen} - For chaining operations
+     */
+    collapse<U = T, E2 = E>(depth: number): Result<U | T, E | E2>;
 }
 
 /**
@@ -503,6 +554,9 @@ export class ErrImpl<E> implements BaseResult<never, E> {
         return this;
     }
     flatten<U = never, E2 = E>(): Result<U, E | E2> {
+        return this;
+    }
+    collapse<U = never, E2 = E>(_depth?: number): Result<U, E | E2> {
         return this;
     }
 }
@@ -628,6 +682,16 @@ export class OkImpl<T> implements BaseResult<T, never> {
             return this.value;
         }
         return this;
+    }
+    collapse<U = T, E2 = never>(depth: number = Infinity): Result<T | U, E2> {
+        if (depth <= 0) return this;
+        let result = this.flatten();
+        let remaining = depth - 1;
+        while (remaining > 0 && result.isOk() && Result.isResult(result.unwrap())) {
+            result = result.flatten();
+            remaining--;
+        }
+        return result as Result<T | U, E2>;
     }
 }
 export type Ok<T> = OkImpl<T>;

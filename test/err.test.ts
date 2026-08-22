@@ -185,3 +185,40 @@ describe('Err.flatten', () => {
         expect(flattened.unwrapErr().isErr()).toBe(true);
     });
 });
+//=================
+
+describe('Err.collapse', () => {
+    test('should return Err directly with depth 0', () => {
+        const err = Err('fail').collapse(0);
+        expect(err).toMatchResult(Err('fail'));
+    });
+
+    test('should return Err directly with depth 1', () => {
+        const err = Err('fail').collapse(1);
+        expect(err).toMatchResult(Err('fail'));
+    });
+
+    test('should return Err directly with default depth', () => {
+        const err = Err('fail').collapse();
+        expect(err).toMatchResult(Err('fail'));
+    });
+
+    test('should preserve error type when collapsing', () => {
+        const err = Err(42).collapse<number, string>();
+        expect(err.unwrapErr()).toBe(42);
+    });
+
+    test('should return Err unchanged when nested Err inside Ok', () => {
+        const err = Ok(Err('fail')).collapse();
+        expect(err).toMatchResult(Err('fail'));
+    });
+
+    test('should handle deeply nested Err with depth limit', () => {
+        const nested = Ok(Ok(Ok(Err('deep'))));
+        const result = nested.collapse(2);
+        expect(result.isOk()).toBe(true);
+        expect(Result.isResult(result.unwrap())).toBe(true);
+        const inner = result.unwrap() as Result<unknown, string>;
+        expect(inner.isErr()).toBe(true);
+    });
+});
