@@ -170,7 +170,7 @@ interface BaseOption<T> extends Iterable<T> {
      * const some2 = Some(Some(Some(4))); // evaluates to Some(Some(4)).
      * ```
      */
-    flatten<U = T>(): Option<U>;
+    flatten<U = T>(): Option<U | T>;
     /**
      * Recursively flattens nested `Option` types to a specified depth or completely.
      *
@@ -510,11 +510,11 @@ export class SomeImpl<T> implements BaseOption<T> {
     filter(f: (v: T) => boolean): Option<T> {
         return f(this.value) ? this : None;
     }
-    flatten<U = T>(): Option<U> {
+    flatten<U = T>(): Option<U | T> {
         if (Option.isOption(this.value)) {
             return this.value;
         }
-        return None;
+        return this;
     }
     collapse<U = DeepInner<T>>(depth: number = Infinity): Option<U> {
         if (depth <= 0) return this as unknown as Option<U>;

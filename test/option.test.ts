@@ -364,9 +364,9 @@ test('flatten converts Some(None) to None', () => {
     expect(some.flatten()).toBe(None);
 });
 
-test('flatten on non-nested Some returns None', () => {
+test('flatten on non-nested Some returns Some', () => {
     const some = Some(5);
-    expect(some.flatten()).toBe(None);
+    expect(some.flatten()).toEqual(Some(5));
 });
 
 test('flatten on None returns None', () => {
@@ -416,20 +416,20 @@ test('collapse Some(Some(None)) to None', () => {
 });
 
 // Non-nested values
-test('collapse on non-nested Some returns None', () => {
+test('collapse on non-nested Some returns Some', () => {
     const some = Some(5);
-    expect(some.collapse()).toBe(None);
-    expect(some.collapse(1)).toBe(None);
+    expect(some.collapse()).toEqual(Some(5));
+    expect(some.collapse(1)).toEqual(Some(5));
 });
 
-test('collapse on Some(undefined) returns None', () => {
+test('collapse on Some(undefined) returns itself', () => {
     const some = Some(undefined);
-    expect(some.collapse()).toBe(None);
+    expect(some.collapse()).toEqual(Some(undefined));
 });
 
-test('collapse on Some(null) returns None', () => {
+test('collapse on Some(null) returns itself', () => {
     const some = Some(null);
-    expect(some.collapse()).toBe(None);
+    expect(some.collapse()).toEqual(Some(null));
 });
 
 // Deep nesting
@@ -476,7 +476,7 @@ test('collapse returns Option type for chaining', () => {
 // Identity
 test('collapse on already flat Some returns None', () => {
     const some = Some(Some(4)).collapse(); // Some(4)
-    expect(some.collapse()).toBe(None); // Not Some(4)!
+    expect(some.collapse()).toEqual(Some(4)); // Not Some(4)!
 });
 //==================== isNoneOr
 
