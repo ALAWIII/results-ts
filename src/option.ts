@@ -23,7 +23,20 @@ type FlattenOption<T> =
           : T extends NoneImpl
             ? NoneImpl
             : Option<T>;
+
+type IsNonPositive<D extends number> = `${D}` extends `-${string}` ? true : D extends 0 ? true : false;
+
 type DeepInner<T> = T extends Option<infer U> ? DeepInner<U> : T;
+type DeepInnerN<T, D extends number, Acc extends unknown[] = []> =
+    IsNonPositive<D> extends true
+        ? T
+        : Acc['length'] extends D
+          ? T
+          : T extends Option<infer U>
+            ? DeepInnerN<U, D, [...Acc, unknown]>
+            : T;
+
+type CollapseDefault<T, D extends number> = IsNever<D> extends true ? DeepInner<T> : DeepInnerN<T, D>;
 interface BaseOption<T> extends Iterable<T> {
     /** `true` when the Option is Some */
     isSome(): this is SomeImpl<T>;
@@ -246,7 +259,7 @@ interface BaseOption<T> extends Iterable<T> {
      * @see flatten - Removes only one layer of nesting
      * @see andThen - For chaining operations that return Options
      */
-    collapse<U = DeepInner<T>>(depth: number): Option<U>;
+    collapse<D extends number = never, U = CollapseDefault<T, D>>(depth: D): Option<U>;
 
     /**
      * Transforms the `Option<T>` into a `Result<T, E>`, mapping `Some(v)` to `Ok(v)` and `None` to `Err(err)`.
@@ -423,7 +436,7 @@ class NoneImpl implements BaseOption<never> {
     flatten(): NoneImpl {
         return this;
     }
-    collapse<U = never>(_depth?: number): Option<U> {
+    collapse<D extends number = never, U = CollapseDefault<never, D>>(_depth?: D): Option<U> {
         return this;
     }
     okOr<E>(error: E): ErrImpl<E> {
@@ -539,11 +552,11 @@ export class SomeImpl<T> implements BaseOption<T> {
         }
         return this as unknown as FlattenOption<T>;
     }
-    collapse<U = DeepInner<T>>(depth: number = Infinity): Option<U> {
-        if (depth <= 0) return this as unknown as Option<U>;
-        let result = this.flatten() as Option<unknown>;
-        let remaining = depth - 1;
 
+    collapse<D extends number = never, U = CollapseDefault<T, D>>(depth?: D): Option<U> {
+        if (depth !== undefined && depth <= 0) return this as unknown as Option<U>;
+        let result = this.flatten() as Option<unknown>;
+        let remaining = (depth ?? Infinity) - 1;
         while (remaining > 0 && result.isSome() && Option.isOption(result.unwrap())) {
             result = result.flatten();
             remaining--;

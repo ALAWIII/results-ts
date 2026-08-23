@@ -393,7 +393,28 @@ test('flatten on None returns None', () => {
     expect(None.flatten()).toBe(None);
 });
 //=================== collapse
+test('should correctly infer the type after calling collapse on stack of Some', () => {
+    const some1 = Some(Some(Some(Some(4))));
+    const infSome1 = some1.collapse();
+    eq<typeof infSome1, Option<number>>(true);
+    const lvlSome1 = some1.collapse(1);
+    eq<typeof lvlSome1, Option<SomeImpl<SomeImpl<number>>>>(true);
+});
+test('should correctly infer the type after calling collapse multiple times with chain of flatten on the same stack of Some', () => {
+    const some1 = Some(Some(Some(Some(4))));
+    const lvlSome1 = some1.collapse(1).flatten().flatten();
+    eq<typeof lvlSome1, Option<number>>(true);
+});
 
+// Identity
+test('collapse on already collapsed Some returns Some (Identity)', () => {
+    const some = Some(Some(4)).collapse(); // Some(4)
+    expect(some).toEqual(Some(4));
+    eq<typeof some, Option<number>>(true); // passes
+    const someCo = some.collapse<never, number>(); // evaluates to never so we need to provide the accurate type returned!!
+    expect(someCo.unwrap()).toBe(4);
+    eq<typeof someCo, Option<number>>(true); // fails
+});
 // Basic flattening
 test('collapse with no depth flattens all layers', () => {
     const some = Some(Some(Some(4)));
@@ -402,7 +423,8 @@ test('collapse with no depth flattens all layers', () => {
 
 test('collapse with depth 0 returns original', () => {
     const some = Some(Some(4));
-    expect(some.collapse(0)).toEqual(Some(Some(4)));
+    const somec = some.collapse(0);
+    expect(somec).toEqual(Some(Some(4)));
 });
 
 test('collapse with depth 1 flattens one layer', () => {
@@ -493,11 +515,6 @@ test('collapse returns Option type for chaining', () => {
     expect(result).toEqual(Some(8));
 });
 
-// Identity
-test('collapse on already flat Some returns None', () => {
-    const some = Some(Some(4)).collapse(); // Some(4)
-    expect(some.collapse()).toEqual(Some(4)); // Not Some(4)!
-});
 //==================== isNoneOr
 
 test('Option.isNoneOr called on None should be true', () => {
