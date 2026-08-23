@@ -2,6 +2,39 @@ import { toString } from './utils.js';
 import { Option, None, Some } from './option.js';
 import { AsyncResult } from './asyncresult.js';
 
+//========================= flatten related types.
+/**
+ * used in flatten implementation.
+ */
+type IsNever<V> = [V] extends [never] ? true : false;
+
+/**
+ * if `V` is never then return Res otherwise Fallback
+ * - used to clean unneeded `never` branches preventing them from stacking and auto collapse to unknown
+ * - this trick is used to solve typing problem, over time when calling multiple `flatten` chain, it fallbacks to `any` becomes impossible to infer the type correctly.
+ * @example
+ *
+ */
+type Clean<V, Res, Fallback> = IsNever<V> extends true ? Res : Fallback;
+
+/**
+ * if `T` is `Ok` then check if user provided custome error type `E2`  then attach it and return `Result<U,E2>`, othewise return inner `Ok<U>` of `T` .
+ *
+ * if `T` is `Err` then check if user provided custome value type `T2` then attach it and return `Result<T2,E>`, otherwise return inner `Err<E>` of `T`.
+ *
+ * if `T` is not `Result` then if user provided custome error type `E2` then attach it and return `Result<T,E2>`, otherwise return OkImpl<T> directly
+ */
+type FlattenOk<T, T2 = never, E2 = never> = [T] extends [OkImpl<infer U>]
+    ? Clean<E2, OkImpl<U>, Result<U, E2>>
+    : [T] extends [ErrImpl<infer E>]
+      ? Clean<T2, ErrImpl<E>, Result<T2, E>>
+      : Clean<E2, OkImpl<T>, Result<T, E2>>;
+
+/**
+ * this used to check if `E` is `Err` then if user proides `T2` attach it and return `Result< T2, E=ErrImpl<M>>`, otherwise just return `E=ErrImpl<M>`, or if `E` isnt `Err` return `E`.
+ */
+type FlattenErr<E, T2 = never> = [E] extends [ErrImpl<infer M>] ? Clean<T2, ErrImpl<M>, Result<T2, M>> : E;
+// ============= collapse related types helpers
 /**
  * used in collapse implementations.
  */
@@ -17,14 +50,7 @@ type DeepInnerN<T, D extends number, Acc extends unknown[] = []> =
           : T extends Result<infer U, any>
             ? DeepInnerN<U, D, [...Acc, unknown]>
             : T;
-/**
- * used in flatten implementation.
- */
-type FlattenResult<T, E2> = [T] extends [OkImpl<infer U>]
-    ? Result<U, E2>
-    : [T] extends [ErrImpl<infer E>]
-      ? Result<never, E | E2>
-      : Result<T, E2>;
+//=================================== transpose helpers
 /**
  * used in transpose implementation.
  */
@@ -406,8 +432,7 @@ interface BaseResult<T, E> extends Iterable<T> {
      * @see {@link andThen} for chaining operations without flattening
      * @see {@link map} for transforming the success value
      */
-    flatten<E2 = never>(): FlattenResult<T, E | E2>;
-
+    flatten(): any;
     /**
      * Recursively flattens nested Results up to a specified depth.
      *
@@ -629,9 +654,8 @@ export class ErrImpl<E> implements BaseResult<never, E> {
         f(this.error);
         return this;
     }
-    flatten<E2 = never>(): Result<never, E | E2>;
-    flatten(): Result<never, E> {
-        return this;
+    flatten<T2 = never, _E2 = never>(): FlattenErr<ErrImpl<E>, T2> {
+        return this as FlattenErr<ErrImpl<E>, T2>;
     }
     collapse<U = never, E2 = E>(): Result<U, E | E2>;
     collapse<D extends number, U = never, E2 = E>(depth: D): Result<U, E | E2>;
@@ -759,9 +783,10 @@ export class OkImpl<T> implements BaseResult<T, never> {
     inspectErr(_f?: (v: never) => void): Result<T, never> {
         return this;
     }
-    flatten<E2 = never>(): FlattenResult<T, E2>;
-    flatten(): Result<any, any> {
-        return Result.isResult(this.value) ? this.value : this;
+    flatten<T2 = never, E2 = never>(): FlattenOk<T, T2, E2> {
+        return Result.isResult(this.value)
+            ? (this.value as FlattenOk<T, T2, E2>)
+            : (new OkImpl(this.value) as FlattenOk<T, T2, E2>);
     }
     collapse<U = DeepInner<T>, E2 = never>(): Result<U, E2>;
     collapse<D extends number, U = DeepInnerN<T, D>, E2 = never>(depth: D): Result<U, E2>;

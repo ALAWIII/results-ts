@@ -1,5 +1,5 @@
 import { assert } from 'conditional-type-checks';
-import { Err, None, Ok, OkImpl, Option, Result, Some, SomeImpl } from '../src/index.js';
+import { Err, ErrImpl, None, Ok, OkImpl, Option, Result, Some, SomeImpl } from '../src/index.js';
 import { eq, expect_never, expect_string } from './util.js';
 
 test('Constructable & Callable', () => {
@@ -157,14 +157,60 @@ test('Ok.and', () => {
     expect(ok.and(Ok(3)).unwrap()).toBe(3);
     expect(ok.and(Err(4)).err().unwrap()).toBe(4);
 });
-//===============
+//=============== Result.flatten
 describe('Ok.flatten', () => {
     test('should correctly infer the types after invoking flatten on Ok', () => {
         const ok = Ok(Ok(42)).flatten();
         expect(ok).toMatchResult(Ok(42));
-        eq<Result<number, never>, typeof ok>(true);
-        eq<Result<number, unknown>, typeof ok>(false);
-        eq<Result<Ok<number>, never>, typeof ok>(false);
+        eq<Ok<number>, typeof ok>(true);
+    });
+    test('should preserve generic types regardless if the user provided the wrong one.', () => {
+        const ok = Ok(Ok(42));
+        const flattened = ok.flatten<string>();
+        eq<OkImpl<number>, typeof flattened>(true);
+    });
+    test('should automatically infer and preserve the generic types when calling flatten more than it accomodates (Identity)', () => {
+        const ok = Ok(Ok(42));
+        const flattened = ok.flatten().flatten().flatten().flatten().flatten();
+        eq<Ok<number>, typeof flattened>(true);
+    });
+    test("should attach provided generic types on stack of Ok's", () => {
+        const ok = Ok(Ok(42));
+        const flattened = ok.flatten<number, string>();
+        eq<Result<number, string>, typeof flattened>(true);
+    });
+    test("should attach provided generic types on stack of Ok's ends with Err", () => {
+        const ok = Ok(Err('hello'));
+        const flattened = ok.flatten<number, string>();
+        eq<Result<number, string>, typeof flattened>(true);
+    });
+
+    test('should automatically infer the generic types after invoking flatten multiple times as chanin on stack of Ok ends with Err.', () => {
+        const ok1 = Ok(Ok(Ok(Err('deep fail')))).flatten();
+        eq<typeof ok1, OkImpl<OkImpl<Err<string>>>>(true);
+        const ok2 = ok1.flatten();
+        eq<typeof ok2, Ok<Err<string>>>(true);
+        const ok3 = ok2.flatten().flatten();
+        eq<typeof ok3, Err<string>>(true);
+    });
+
+    test('should automatically infer the generic types after invoking flatten 2 times as chanin on stack of Ok ends with Err.', () => {
+        const ok1 = Ok(Ok(Ok(Ok(Err('deep fail')))))
+            .flatten()
+            .flatten();
+        eq<typeof ok1, Ok<Ok<ErrImpl<string>>>>(true);
+    });
+    test('should ignore wrong attached types for Err and rely on the infered once.', () => {
+        const ok1 = Ok(Ok(Err('deep fail')));
+        const flattened = ok1.flatten<number, number>(); // inferred Err<string> has higer priority over the wrongly provided once.
+        eq<typeof flattened, Result<Err<string>, number>>(true);
+        eq<typeof flattened, Result<Err<number>, number>>(false);
+    });
+    test('should ignore wrong attached types for Ok and rely on the infered once.', () => {
+        const ok1 = Ok(Ok(Ok('hello')));
+        const flattened = ok1.flatten<number, string>();
+        eq<typeof flattened, Result<Ok<string>, string>>(true);
+        eq<typeof flattened, Result<Ok<number>, string>>(false);
     });
     test('should return inner Ok value when Ok contains Ok', () => {
         const ok = Ok(Ok(42)).flatten();
@@ -195,12 +241,6 @@ describe('Ok.flatten', () => {
     test('should handle nested Ok multiple levels deep', () => {
         const ok = Ok(Ok(Ok(42))).flatten();
         expect(ok).toMatchResult(Ok(Ok(42)));
-    });
-
-    test('should preserve generic types', () => {
-        const ok = Ok(Ok(42));
-        const flattened = ok.flatten<string>();
-        eq<Result<number, string>, typeof flattened>(true);
     });
 
     test('should work with mixed nested types', () => {
