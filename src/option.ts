@@ -2,6 +2,7 @@ import { AsyncOption } from './asyncoption.js';
 import { toString } from './utils.js';
 import { Result, Ok, Err, ErrImpl, OkImpl } from './result.js';
 
+//=========== used on transpose.
 type IsNever<T> = [T] extends [never] ? true : false;
 
 type Prefer<T, Fallback> = IsNever<T> extends true ? Fallback : T;
@@ -13,7 +14,16 @@ type TransposeResult<T, U, E2 = never> = [T] extends [OkImpl<infer Inner>]
       : [T] extends [Result<infer Inner, infer InnerE>]
         ? Result<Option<Prefer<Prefer<Inner, U>, InnerE>>, Prefer<Prefer<InnerE, E2>, Inner>>
         : Result<Option<Prefer<T, U>>, E2>;
-
+//====== used on flatten and collapse
+type FlattenOption<T> =
+    IsNever<T> extends true
+        ? None
+        : T extends SomeImpl<infer U>
+          ? Option<U>
+          : T extends NoneImpl
+            ? NoneImpl
+            : Option<T>;
+type DeepInner<T> = T extends Option<infer U> ? DeepInner<U> : T;
 interface BaseOption<T> extends Iterable<T> {
     /** `true` when the Option is Some */
     isSome(): this is SomeImpl<T>;
@@ -182,7 +192,7 @@ interface BaseOption<T> extends Iterable<T> {
      * const some2 = Some(Some(Some(4))); // evaluates to Some(Some(4)).
      * ```
      */
-    flatten<U = T>(): Option<U | T>;
+    flatten(): FlattenOption<T>;
     /**
      * Recursively flattens nested `Option` types to a specified depth or completely.
      *
@@ -410,7 +420,7 @@ class NoneImpl implements BaseOption<never> {
     filter(_f?: (v: never) => boolean): None {
         return None;
     }
-    flatten<U = never>(): Option<U> {
+    flatten(): NoneImpl {
         return this;
     }
     collapse<U = never>(_depth?: number): Option<U> {
@@ -523,11 +533,11 @@ export class SomeImpl<T> implements BaseOption<T> {
     filter(f: (v: T) => boolean): Option<T> {
         return f(this.value) ? this : None;
     }
-    flatten<U = T>(): Option<U | T> {
+    flatten(): FlattenOption<T> {
         if (Option.isOption(this.value)) {
-            return this.value;
+            return this.value as FlattenOption<T>;
         }
-        return this;
+        return this as unknown as FlattenOption<T>;
     }
     collapse<U = DeepInner<T>>(depth: number = Infinity): Option<U> {
         if (depth <= 0) return this as unknown as Option<U>;
@@ -579,7 +589,7 @@ export type OptionSomeType<T extends Option<any>> = T extends SomeImpl<infer U> 
 export type OptionSomeTypes<T extends Option<any>[]> = {
     [key in keyof T]: T[key] extends Option<any> ? OptionSomeType<T[key]> : never;
 };
-type DeepInner<T> = T extends Option<infer U> ? DeepInner<U> : T;
+
 export namespace Option {
     /**
      * Parse a set of `Option`s, returning an array of all `Some` values.

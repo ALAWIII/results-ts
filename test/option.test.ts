@@ -349,6 +349,26 @@ test('Some.filter', () => {
     const someFilter2 = Some(4).filter(isEven);
     expect(someFilter2).toEqual(Some(4));
 });
+
+//==================
+test('should infer type correctly after calling flatten on stack of Some', () => {
+    const some0 = Some(4);
+    const someFlatten0 = some0.flatten();
+    eq<typeof someFlatten0, Option<number>>(true);
+
+    const some = Some(Some(4));
+    const someFlatten = some.flatten();
+    eq<typeof someFlatten, Option<number>>(true);
+
+    const some2 = Some(Some(Some(Some(4))));
+    const someFlatten2 = some2.flatten();
+    eq<typeof someFlatten2, Option<SomeImpl<SomeImpl<number>>>>(true);
+});
+test('should infer type correctly after calling flatten on stack of Some ends with None', () => {
+    const some2 = Some(Some(Some(None)));
+    const someFlatten2 = some2.flatten();
+    eq<typeof someFlatten2, Option<SomeImpl<None>>>(true);
+});
 test('flatten removes one layer from Some(Some(T))', () => {
     const some = Some(Some(4));
     expect(some.flatten()).toEqual(Some(4));
