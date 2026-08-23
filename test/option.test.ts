@@ -534,6 +534,46 @@ test('Option.xor accepts None return Some', () => {
 
 // transpose tests
 describe('Option.transpose', () => {
+    test('should correctly infer the type after Some(Ok) transpose.', () => {
+        const opt = Some(Ok(42));
+        const result = opt.transpose<number, string>();
+        const result2 = opt.transpose();
+        eq<typeof result, Result<Option<number>, string>>(true);
+        eq<typeof result2, Result<Option<number>, number>>(true);
+    });
+    test('should correctly infer the type after Some(Err) transpose.', () => {
+        const opt = Some(Err(42));
+        const result = opt.transpose();
+        const result2 = opt.transpose<string, number>();
+        eq<typeof result, Result<Option<number>, number>>(true);
+        eq<typeof result2, Result<Option<string>, number>>(true);
+    });
+    test('should correctly infer the type after Some(Err) transpose and providing unknown.', () => {
+        const opt = Some(Err(42));
+        const result = opt.transpose<string>();
+        const result2 = opt.transpose<unknown, number>();
+        eq<typeof result, Result<Option<string>, number>>(true);
+        eq<typeof result2, Result<Option<unknown>, number>>(true);
+    });
+    test('should correctly infer the type after Some(Err) transpose and has higher default infered priority.', () => {
+        const opt = Some(Err(42));
+        const result = opt.transpose<string>();
+        const result2 = opt.transpose<number, unknown>(); // providing this is useless since Err(42) E=number and has higher safe priority over the input generic arguments.
+        eq<typeof result, Result<Option<string>, number>>(true);
+        eq<typeof result2, Result<Option<number>, unknown>>(false);
+    });
+    test('should correctly infer the type after None transpose.', () => {
+        const opt = None;
+        const result = opt.transpose<number, string>();
+        const result2 = opt.transpose();
+        const result3 = opt.transpose<number>();
+        const result4 = opt.transpose<unknown, never>();
+        eq<typeof result, Result<Option<number>, string>>(true);
+        eq<typeof result2, Result<Option<never>, never>>(true);
+        eq<typeof result3, Result<Option<number>, never>>(true);
+        eq<typeof result4, Result<Option<unknown>, never>>(true);
+    });
+
     // None case
     test('None.transpose() should return Ok(None)', () => {
         const result = None.transpose();

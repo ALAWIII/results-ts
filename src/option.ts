@@ -2,6 +2,18 @@ import { AsyncOption } from './asyncoption.js';
 import { toString } from './utils.js';
 import { Result, Ok, Err, ErrImpl, OkImpl } from './result.js';
 
+type IsNever<T> = [T] extends [never] ? true : false;
+
+type Prefer<T, Fallback> = IsNever<T> extends true ? Fallback : T;
+
+type TransposeResult<T, U, E2 = never> = [T] extends [OkImpl<infer Inner>]
+    ? Result<Option<Prefer<Inner, U>>, Prefer<E2, Inner>>
+    : [T] extends [ErrImpl<infer InnerE>]
+      ? Result<Option<Prefer<U, InnerE>>, Prefer<InnerE, E2>>
+      : [T] extends [Result<infer Inner, infer InnerE>]
+        ? Result<Option<Prefer<Prefer<Inner, U>, InnerE>>, Prefer<Prefer<InnerE, E2>, Inner>>
+        : Result<Option<Prefer<T, U>>, E2>;
+
 interface BaseOption<T> extends Iterable<T> {
     /** `true` when the Option is Some */
     isSome(): this is SomeImpl<T>;
@@ -320,7 +332,7 @@ interface BaseOption<T> extends Iterable<T> {
      *
      * @see {@link Result.transpose} - Inverse operation (Result<Option<T>, E> → Option<Result<T, E>>)
      */
-    transpose<E, U = T>(): Result<Option<T | U>, E>;
+    transpose<U = never, E2 = never>(): TransposeResult<T, U, E2>;
     /**
      * Creates an `AsyncOption` based on this `Option`.
      *
@@ -413,8 +425,9 @@ class NoneImpl implements BaseOption<never> {
     xor<U = never>(other: Option<U>): Option<U> {
         return other;
     }
-    transpose<E, U>(): Result<Option<U>, E> {
-        return Ok(None);
+
+    transpose<U = never, E2 = never>(): Result<Option<U>, E2> {
+        return Ok(None) as Result<Option<U>, E2>;
     }
     toString(): string {
         return 'None';
@@ -537,11 +550,14 @@ export class SomeImpl<T> implements BaseOption<T> {
     xor(other: Option<T>): Option<T> {
         return other.isNone() ? this : None;
     }
-    transpose<E, U = T>(): Result<Option<T>, E> {
+    transpose<U = never, E2 = never>(): TransposeResult<T, U, E2> {
         if (!Result.isResult(this.value)) {
-            return Ok(Some(this.value));
+            return Ok(Some(this.value)) as TransposeResult<T, U, E2>;
         }
-        return this.value.isErr() ? this.value : Ok(Some(this.value.value));
+        if (this.value.isErr()) {
+            return this.value as TransposeResult<T, U, E2>;
+        }
+        return Ok(Some(this.value.value)) as TransposeResult<T, U, E2>;
     }
     toAsyncOption(): AsyncOption<T> {
         return new AsyncOption(this);
