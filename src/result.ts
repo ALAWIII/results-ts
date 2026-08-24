@@ -94,15 +94,16 @@ type TransposeErrReturnType<E, T = never> = Clean<T, Some<Err<E>>, Some<Result<T
 
 type MapperOk<T, E = never> = Clean<E, OkImpl<T>, Result<T, E>>;
 type MapperErr<E, T = never> = Clean<T, ErrImpl<E>, Result<T, E>>;
-//======================= andThen,and
+//======================= andThen, and, orElse, or
 /**
- * Used in `OkImpl.and` and `OkImpl.andThen` to correctly infer the types returned.
+ * Used in `OkImpl.and` | `ErrImpl.or`  and `OkImpl.andThen` | `ErrImpl.orElse` to correctly infer the types returned.
  */
-type AndResult<T2, E2, R = Result<T2, E2>> = [R] extends [OkImpl<infer O>]
+type AndOrResult<T2, E2, R = Result<T2, E2>> = [R] extends [OkImpl<infer O>]
     ? OkImpl<O>
     : [R] extends [ErrImpl<infer E>]
       ? ErrImpl<E>
       : R;
+
 //=======================================================
 interface BaseResult<T, E> extends Iterable<T> {
     /** `true` when the result is Ok */
@@ -369,7 +370,7 @@ interface BaseResult<T, E> extends Iterable<T> {
      * Ok(1).or(Ok(2)) // => Ok(1)
      * Err('error here').or(Ok(2)) // => Ok(2)
      */
-    or<T2, E2>(other: Result<T2, E2>): Result<T2 | T, E2>;
+    or(other: any): any;
     /**
      * Returns `Ok()` if we have a value, otherwise returns the result
      * of calling `other()`.
@@ -381,7 +382,7 @@ interface BaseResult<T, E> extends Iterable<T> {
      * Ok(1).orElse(() => Ok(2)) // => Ok(1)
      * Err('error').orElse(() => Ok(2)) // => Ok(2)
      */
-    orElse<T2, E2>(other: (error: E) => Result<T2, E2>): Result<T | T2, E2>;
+    orElse(other: (error: E) => any): any;
 
     /**
      *  Converts from `Result<T, E>` to `Option<T>`, discarding the error if any
@@ -673,12 +674,12 @@ export class ErrImpl<E> implements BaseResult<never, E> {
         return default_(this.error);
     }
 
-    or<T2, E2>(other: Result<T2, E2>): Result<T2, E2> {
-        return other;
+    or<T2, E2, R extends Result<T2, E2> = Result<T2, E2>>(other: R): AndOrResult<T2, E2, R> {
+        return other as AndOrResult<T2, E2, R>;
     }
 
-    orElse<T2, E2>(other: (error: E) => Result<T2, E2>): Result<T2, E2> {
-        return other(this.error);
+    orElse<T2, E2, R extends Result<T2, E2> = Result<T2, E2>>(other: (error: E) => R): AndOrResult<T2, E2, R> {
+        return other(this.error) as AndOrResult<T2, E2, R>;
     }
 
     ok(): Option<never> {
@@ -794,18 +795,18 @@ export class OkImpl<T> implements BaseResult<T, never> {
     mapOrElse<U>(_default_: (_error: never) => U, mapper: (val: T) => U): U {
         return mapper(this.value);
     }
-    andThen<T2, E2, R extends Result<T2, E2> = Result<T2, E2>>(mapper: (val: T) => R): AndResult<T2, E2, R> {
-        return mapper(this.value) as AndResult<T2, E2, R>;
+    andThen<T2, E2, R extends Result<T2, E2> = Result<T2, E2>>(mapper: (val: T) => R): AndOrResult<T2, E2, R> {
+        return mapper(this.value) as AndOrResult<T2, E2, R>;
     }
-    and<T2, E2, R extends Result<T2, E2> = Result<T2, E2>>(res: R): AndResult<T2, E2, R> {
-        return res as AndResult<T2, E2, R>;
+    and<T2, E2, R extends Result<T2, E2> = Result<T2, E2>>(res: R): AndOrResult<T2, E2, R> {
+        return res as AndOrResult<T2, E2, R>;
     }
 
-    or<T2, E2>(_other?: Result<T2, E2>): Result<T, E2> {
+    or(_other?: unknown): OkImpl<T> {
         return this;
     }
 
-    orElse<T2, E2>(_other?: (error: never) => Result<T2, E2>): Result<T, never> {
+    orElse(_other?: unknown): OkImpl<T> {
         return this;
     }
 

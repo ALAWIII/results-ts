@@ -435,16 +435,17 @@ test('or / orElse', () => {
     const result = Err('boo');
 
     const afterOrElseAlwaysErr = result.orElse((error) => Err(error === 'boo'));
-    eq<typeof afterOrElseAlwaysErr, Result<number | unknown, boolean>>(true);
+    eq<typeof afterOrElseAlwaysErr, ErrImpl<boolean>>(true);
     const afterOrElseAlwaysOk = result.orElse((_error) => Ok(1));
-    eq<typeof afterOrElseAlwaysOk, Result<number | 1, unknown>>(true);
+    expect(afterOrElseAlwaysOk).toMatchResult(Ok(1));
+    eq<typeof afterOrElseAlwaysOk, OkImpl<number>>(true);
     const afterOrElseAnyResult = result.orElse((error) => (error === 'foo' ? Ok(1) : Err('bar')));
     eq<typeof afterOrElseAnyResult, Result<number | 1, string>>(true);
 
-    const afterOrErr = result.or(Err(true));
+    const afterOrErr = result.or<unknown, boolean>(Err(true));
     eq<typeof afterOrErr, Result<unknown, boolean>>(true);
     const afterOrOk = result.or(Ok(1));
-    eq<typeof afterOrOk, Result<number, unknown>>(true);
+    eq<typeof afterOrOk, OkImpl<number>>(true);
     const afterOrResult = result.or(Err(true) as Result<number, boolean>);
     eq<typeof afterOrResult, Result<number, boolean>>(true);
 
@@ -453,7 +454,7 @@ test('or / orElse', () => {
 
     expect(Ok(1).or(Ok(2))).toEqual(Ok(1));
     expect(
-        Ok(1).orElse((_error) => {
+        Ok(1).orElse(() => {
             throw new Error('Call unexpected');
         }),
     ).toEqual(Ok(1));
@@ -518,7 +519,7 @@ test('andThen/orElse chaining regression', () => {
         .andThen(() => foo3());
 
     expect(test2).toEqual(Ok({ name: 'T3' }));
-    eq<typeof test2, OkImpl<T3> | ErrImpl<E3> | ErrImpl<E2 | E3>>(true);
+    eq<typeof test2, OkImpl<T3> | ErrImpl<E3> | ErrImpl<E2>>(true);
 });
 
 test('Result.isOkAnd', () => {
