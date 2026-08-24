@@ -254,14 +254,66 @@ describe('Ok.flatten', () => {
 //=============
 
 describe('Ok.collapse', () => {
+    test('should correctly infer the type after success collapsing', () => {
+        const ok = Ok(Ok(Ok(Ok(42)))).collapse(2);
+        expect(ok).toMatchResult(Ok(Ok(42)));
+        eq<Ok<Ok<number>>, typeof ok>(true);
+    });
+    test('should correctly infer the type after success calling a chain of collapse.', () => {
+        const ok = Ok(Ok(Ok(Ok(42))))
+            .collapse(2)
+            .collapse(1);
+        eq<Ok<number>, typeof ok>(true);
+    });
+    test('should correctly infer the type after success calling a chain of collapse with number 0.', () => {
+        const ok = Ok(Ok(Ok(Ok(42))))
+            .collapse(2)
+            .collapse(0);
+        eq<Ok<Ok<number>>, typeof ok>(true);
+    });
+    test('should correctly infer the type after success calling a chain of collapse ends with Err.', () => {
+        const ok = Ok(Ok(Ok(Err(42))))
+            .collapse(2)
+            .collapse(3);
+        eq<Err<number>, typeof ok>(true);
+    });
+
+    test('should correctly ignore incorrectly provided type and rely on the infered type after success calling a chain of collapse ends with Err.', () => {
+        const ok = Ok(Ok(Ok(Err(42)))).collapse(2);
+        const d = 1;
+        const err = ok.collapse<typeof d, string, string>(d);
+        expect(err).toMatchResult(Err(42));
+        eq<Result<string, number>, typeof err>(true);
+    });
+    test('should correctly automatically infer the types when calling collapse ends with Err.', () => {
+        const err = Ok(Ok(Ok(Err(42)))).collapse();
+
+        expect(err).toMatchResult(Err(42));
+        eq<ErrImpl<number>, typeof err>(true);
+    });
+
+    test('should correctly attach the provided types when calling collapse ends with Err.', () => {
+        const err = Ok(Ok(Ok(Err(42)))).collapse<string, number>();
+
+        expect(err).toMatchResult(Err(42));
+        eq<Result<string, number>, typeof err>(true);
+    });
+    test('should correctly allow to call multiple collapse on Err type the provided types when mixing the call of collapse and collapse(N) ends with Err.', () => {
+        const err = Ok(Ok(Ok(Err(42)))).collapse();
+        const err2 = err.collapse();
+        expect(err).toMatchResult(Err(42));
+        eq<ErrImpl<number>, typeof err2>(true);
+    });
+    test('should correctly allow to call multiple collapse, collapse(N) on Err type without losing the type infered.', () => {
+        const err = Ok(Ok(Ok(Err(42)))).collapse();
+        const err2 = err.collapse(7).collapse(34).collapse();
+        expect(err).toMatchResult(Err(42));
+        eq<ErrImpl<number>, typeof err2>(true);
+    });
+
     test('should return Ok directly when non-Result value', () => {
         const ok = Ok(42).collapse();
         expect(ok).toMatchResult(Ok(42));
-    });
-    test('should correctly infer the type after success flatten', () => {
-        const ok = Ok(Ok(Ok(Ok(42)))).collapse(2);
-        expect(ok).toMatchResult(Ok(Ok(42)));
-        eq<Result<Ok<number>, never>, typeof ok>(true);
     });
 
     test('should flatten single level with depth 0', () => {

@@ -36,20 +36,47 @@ type FlattenOk<T, T2 = never, E2 = never> = [T] extends [OkImpl<infer U>]
 type FlattenErr<E, T2 = never> = [E] extends [ErrImpl<infer M>] ? Clean<T2, ErrImpl<M>, Result<T2, M>> : E;
 // ============= collapse related types helpers
 /**
- * used in collapse implementations.
+ * Checks if the given depth `D` is positive, used in collapse implementations.
  */
 type IsNonPositive<D extends number> = `${D}` extends `-${string}` ? true : D extends 0 ? true : false;
-// Full flatten (no depth bound) — used when no depth arg is given
-type DeepInner<T> = T extends Result<infer U, any> ? DeepInner<U> : T;
+/**
+ *  Full flatten (no depth bound) — used when no depth arg is given
+ *  - if `T` is `Ok` then obtain its value `InnerT` and pass it again down.
+ *  - if `T` is `Err` then obtain its value `E` and check if `T2` was provided if yes then return `Result<T2,E>` otherwise return `ErrImpl<E>`.
+ *  - otherwise check if `E2` was provided , if yes then return `Result<T,E2>` otherwise return `OkImpl<T>`.
+ */
+type DeepInner<T, T2 = never, E2 = never> = [T] extends [OkImpl<infer InnerT>]
+    ? DeepInner<InnerT, T2, E2>
+    : [T] extends [ErrImpl<infer E>]
+      ? Clean<T2, ErrImpl<E>, Result<T2, E>>
+      : Clean<E2, OkImpl<T>, Result<T, E2>>;
 // Bounded flatten — recursion count tracked in the Acc tuple, mirrors the runtime loop
-type DeepInnerN<T, D extends number, Acc extends unknown[] = []> =
-    IsNonPositive<D> extends true
-        ? T
-        : Acc['length'] extends D
-          ? T
-          : T extends Result<infer U, any>
-            ? DeepInnerN<U, D, [...Acc, unknown]>
-            : T;
+type DeepInnerN<T, D extends number, T2 = never, E2 = never> =
+    IsNonPositive<D> extends true ? T : CollapseResult<T, D, T2, E2>;
+
+/**
+ * - check if `T` is `OkImpl` if yes then if `E2` was provided return `Result<FinalT,E2>` otherwise fallback and return `OkImpl<FinalT>`
+ * - check if `T` is `ErrImpl` if yes then if `T2` was provided return `Result<T2,FinalE>` otherwise fallback and return `OkImpl<FinalE>`
+ * - othewise return T.
+ */
+type ReachedDepthCondition<T, T2 = never, E2 = never> = [T] extends [OkImpl<infer FinalT>]
+    ? Clean<E2, OkImpl<FinalT>, Result<FinalT, E2>>
+    : [T] extends [ErrImpl<infer FinalE>]
+      ? Clean<T2, ErrImpl<FinalE>, Result<T2, FinalE>>
+      : T;
+/**
+ * - check recursively if `Acc` reached depth if yes then invoke `ReachedDepthCondition`,
+ * - othewise: if `T` is `OkImpl` then extract its `InnerT` and pass it down again to `CollapseResult`
+ * - otherwise: if `T` is `ErrImpl` then extract its `E` and then check if `T2` was provided then return `Result<T2,E>` otherwise just return `ErrImpl<E>`
+ * - if `T` is not `Result` then check if `E2` was provided if yes then wrap `T` with `OkImpl` and return `Result<T,E2>` otherwise just return `OkImpl<T>`.
+ */
+type CollapseResult<T, D extends number, T2 = never, E2 = never, Acc extends unknown[] = []> = Acc['length'] extends D
+    ? ReachedDepthCondition<T, T2, E2>
+    : [T] extends [OkImpl<infer InnerT>]
+      ? CollapseResult<InnerT, D, T2, E2, [...Acc, unknown]>
+      : [T] extends [ErrImpl<infer E>]
+        ? Clean<T2, ErrImpl<E>, Result<T2, E>>
+        : Clean<E2, OkImpl<T>, Result<T, E2>>;
 //=================================== transpose helpers
 /**
  * used in transpose implementation.
@@ -482,8 +509,8 @@ interface BaseResult<T, E> extends Iterable<T> {
      * @see {@link flatten} - For single-level flattening
      * @see {@link andThen} - For chaining operations
      */
-    collapse<U = DeepInner<T>, E2 = E>(): Result<U, E | E2>;
-    collapse<D extends number, U = DeepInnerN<T, D>, E2 = E>(depth: D): Result<U, E | E2>;
+    collapse(): any;
+    collapse(depth: number): any;
     /**
      * Transposes a `Result` of an `Option` into an `Option` of a `Result`.
      *
@@ -657,10 +684,10 @@ export class ErrImpl<E> implements BaseResult<never, E> {
     flatten<T2 = never, _E2 = never>(): FlattenErr<ErrImpl<E>, T2> {
         return this as FlattenErr<ErrImpl<E>, T2>;
     }
-    collapse<U = never, E2 = E>(): Result<U, E | E2>;
-    collapse<D extends number, U = never, E2 = E>(depth: D): Result<U, E | E2>;
-    collapse(_depth?: number): Result<never, E> {
-        return this as any;
+    collapse<T2 = never, E2 = never>(): DeepInner<ErrImpl<E>, T2, E2>;
+    collapse<D extends number, T2 = never, E2 = never>(depth: D): DeepInnerN<ErrImpl<E>, D, T2, E2>;
+    collapse(_depth: number = Infinity): any {
+        return this;
     }
     transpose<T2 = never, E2 = E>(): Option<Result<T2, E>> {
         return Some(Err(this.error));
@@ -788,9 +815,9 @@ export class OkImpl<T> implements BaseResult<T, never> {
             ? (this.value as FlattenOk<T, T2, E2>)
             : (new OkImpl(this.value) as FlattenOk<T, T2, E2>);
     }
-    collapse<U = DeepInner<T>, E2 = never>(): Result<U, E2>;
-    collapse<D extends number, U = DeepInnerN<T, D>, E2 = never>(depth: D): Result<U, E2>;
-    collapse(depth: number = Infinity): Result<any, any> {
+    collapse<T2 = never, E2 = never>(): DeepInner<T, T2, E2>;
+    collapse<D extends number, T2 = never, E2 = never>(depth: D): DeepInnerN<OkImpl<T>, D, T2, E2>;
+    collapse(depth: number = Infinity): any {
         if (depth <= 0) return this;
         let result: Result<any, any> = this.flatten();
         let remaining = depth - 1;
@@ -800,6 +827,7 @@ export class OkImpl<T> implements BaseResult<T, never> {
         }
         return result;
     }
+
     transpose<T2 = UnwrapOption<T>, E2 = never>(): Option<Result<T2, E2>> {
         if (!Option.isOption(this.value)) {
             // if the contained value wasnt option
