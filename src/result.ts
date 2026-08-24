@@ -80,8 +80,16 @@ type CollapseResult<T, D extends number, T2 = never, E2 = never, Acc extends unk
 //=================================== transpose helpers
 /**
  * used in transpose implementation.
+ * - if `T` is `Some<U>` if yes then if `E` is provided return `Result<U, E>` otherwise return `OkImpl<U>`.
+ * - if `T` is `None` return `None`
+ * - otherwise: wrap `T` with `Some<OkImpl<U>>` or `Result<U,E>` and return it.
  */
-type UnwrapOption<T> = T extends Option<infer U> ? U : T;
+type TransposeOkReturnType<T, E = never> = [T] extends [Some<infer U>]
+    ? Some<Clean<E, OkImpl<U>, Result<U, E>>>
+    : [T] extends [None]
+      ? None
+      : Some<Clean<E, ErrImpl<E>, Result<T, E>>>;
+type TransposeErrReturnType<E, T = never> = Clean<T, Some<Err<E>>, Some<Result<T, E>>>;
 //================
 interface BaseResult<T, E> extends Iterable<T> {
     /** `true` when the result is Ok */
@@ -565,7 +573,7 @@ interface BaseResult<T, E> extends Iterable<T> {
      * }
      *
      */
-    transpose<T2 = UnwrapOption<T>, E2 = E>(): Option<Result<T2, E2 | E>>;
+    transpose(): any;
 }
 
 /**
@@ -689,7 +697,7 @@ export class ErrImpl<E> implements BaseResult<never, E> {
     collapse(_depth: number = Infinity): any {
         return this;
     }
-    transpose<T2 = never, E2 = E>(): Option<Result<T2, E>> {
+    transpose<T2 = never, _E2 = E>(): TransposeErrReturnType<E, T2> {
         return Some(Err(this.error));
     }
 }
@@ -828,16 +836,16 @@ export class OkImpl<T> implements BaseResult<T, never> {
         return result;
     }
 
-    transpose<T2 = UnwrapOption<T>, E2 = never>(): Option<Result<T2, E2>> {
+    transpose<_T2 = never, E2 = never>(): TransposeOkReturnType<T, E2> {
         if (!Option.isOption(this.value)) {
             // if the contained value wasnt option
-            return Some(Ok(this.value as unknown as T2));
+            return Some(Ok(this.value)) as TransposeOkReturnType<T, E2>;
         }
         const opt = this.value;
         if (opt.isNone()) {
-            return None;
+            return None as TransposeOkReturnType<T, E2>;
         }
-        return Some(Ok(opt.unwrap()));
+        return Some(Ok(opt.unwrap())) as TransposeOkReturnType<T, E2>;
     }
 }
 
@@ -863,14 +871,14 @@ export type ResultErrType<T> = T extends ErrImpl<infer U> ? U : never;
  * Extracts all Ok types from an array of Results
  */
 export type ResultOkTypes<T extends Result<any, any>[]> = {
-    [key in keyof T]: T[key] extends Result<infer U, any> ? ResultOkType<T[key]> : never;
+    [key in keyof T]: T[key] extends Result<infer _U, any> ? ResultOkType<T[key]> : never;
 };
 
 /**
  * Extracts all Err types from an array of Results
  */
 export type ResultErrTypes<T extends Result<any, any>[]> = {
-    [key in keyof T]: T[key] extends Result<infer U, any> ? ResultErrType<T[key]> : never;
+    [key in keyof T]: T[key] extends Result<infer _U, any> ? ResultErrType<T[key]> : never;
 };
 
 /**

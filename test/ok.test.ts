@@ -397,6 +397,16 @@ describe('Ok.collapse', () => {
 //====
 
 describe('OkImpl.transpose', () => {
+    test('check inference after transpose Ok(Some(Some(val))) -> Some(Ok(Some(val)))', () => {
+        const ok = Ok(Some(Some(4)));
+        const tok = ok.transpose();
+        eq<typeof tok, SomeImpl<OkImpl<SomeImpl<number>>>>(true);
+    });
+    test('should correctly fallback to its infered type when attaching wrong one.', () => {
+        const ok = Ok(Some(Some(4)));
+        const tok = ok.transpose<string, number>();
+        eq<typeof tok, SomeImpl<Result<SomeImpl<number>, number>>>(true);
+    });
     test('Ok(Some(value)) -> Some(Ok(value))', () => {
         const ok = Ok(Some(42));
         const result = ok.transpose();
@@ -404,14 +414,11 @@ describe('OkImpl.transpose', () => {
         expect(result.unwrap()).toBeInstanceOf(OkImpl);
         expect(result.unwrap()).toMatchResult(Ok(42));
     });
-    test('check inference after transpose Ok(Some(Some(val))) -> Some(Ok(Some(val)))', () => {
-        const ok = Ok(Some(Some(4)));
-        const tok = ok.transpose();
-        eq<typeof tok, Option<Result<SomeImpl<number>, never>>>(true);
-    });
-    test('Ok(None) -> None', () => {
+
+    test('Ok(None) -> None and should drop the provided attached types.', () => {
         const ok = Ok(None);
-        const result = ok.transpose();
+        const result = ok.transpose<string, number>();
+        eq<typeof result, None>(true);
         expect(result).toBe(None);
     });
 

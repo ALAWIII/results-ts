@@ -224,6 +224,11 @@ describe('Err.collapse', () => {
 });
 //====
 describe('ErrImpl.transpose', () => {
+    test('check inference after transpose Ok(Some(Err(val))) -> Some(Ok(Err(val)))', () => {
+        const ok = Ok(Some(Err(4)));
+        const tok = ok.transpose();
+        eq<typeof tok, Some<Ok<Err<number>>>>(true);
+    });
     test('transposes Err to Some(Err)', () => {
         const err = Err('oops');
         const result = err.transpose();
@@ -231,15 +236,11 @@ describe('ErrImpl.transpose', () => {
         expect(result.unwrap()).toBeInstanceOf(ErrImpl);
         expect(result.unwrap()).toMatchResult(Err('oops'));
     });
-    test('check inference after transpose Ok(Some(Some(val))) -> Some(Ok(Some(val)))', () => {
-        const ok = Ok(Some(Err(4)));
-        const tok = ok.transpose();
-        eq<typeof tok, Option<Result<Err<number>, never>>>(true);
-    });
-    test('preserves error value', () => {
-        const err = Err(404) as Result<number, number>;
-        const result = err.transpose();
+    test('preserves error value and should prefer infered correct type over the wrong provided one.', () => {
+        const err = Err(404);
+        const result = err.transpose<string, string>();
         expect(result.unwrap()).toMatchResult(Err(404));
+        eq<typeof result, Some<Result<string, number>>>(true);
     });
 
     test('is idempotent (calling again does nothing new)', () => {
