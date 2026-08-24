@@ -80,6 +80,11 @@ test('unwrapErr', () => {
     eq<number, typeof err>(true);
 });
 
+test('andThen', () => {
+    const err = Err('Err').andThen(() => Ok(3));
+    expect(err).toMatchResult(Err('Err'));
+    eq<typeof err, Result<number, unknown>>(true);
+});
 test('map', () => {
     const err = Err(3).map((x: any) => Symbol());
     expect(err).toMatchResult(Err(3));
@@ -87,17 +92,15 @@ test('map', () => {
     const err2 = Err(3).map();
     eq<typeof err2, ErrImpl<number>>(true);
 });
-
-test('andThen', () => {
-    const err = Err('Err').andThen(() => Ok(3));
-    expect(err).toMatchResult(Err('Err'));
-    eq<typeof err, Result<number, unknown>>(true);
-});
-
 test('mapErr', () => {
-    const err = Err('32').mapErr((x) => +x) as ErrImpl<number>;
+    const err = Err('32').mapErr((x) => +x);
     expect(err).toMatchResult(Err(32));
     eq<typeof err, ErrImpl<number>>(true);
+});
+test('mapErr and attach it with types', () => {
+    const err = Err('32').mapErr<string, number>((x) => +x);
+    expect(err).toMatchResult(Err(32));
+    eq<typeof err, Result<string, number>>(true);
 });
 
 test('mapOr / mapOrElse', () => {

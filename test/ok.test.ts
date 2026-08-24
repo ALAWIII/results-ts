@@ -77,12 +77,6 @@ test('unwrapErr', () => {
     }
 });
 
-test('map', () => {
-    const mapped = Ok(3).map<string, number>((x) => x.toString(10));
-    expect(mapped).toMatchResult(Ok('3'));
-    eq<typeof mapped, Result<string, number>>(true);
-});
-
 test('andThen', () => {
     const ok = Ok('Ok').andThen(() => Ok(3));
     expect(ok).toMatchResult(Ok(3));
@@ -92,11 +86,21 @@ test('andThen', () => {
     expect(err).toMatchResult(Err(false));
     eq<typeof err, Result<unknown, boolean>>(true);
 });
+test('map', () => {
+    const mapped = Ok(3).map<string, number>((x) => x.toString(10));
+    expect(mapped).toMatchResult(Ok('3'));
+    eq<typeof mapped, Result<string, number>>(true);
+});
 
-test('mapErr', () => {
-    const ok = Ok('32').mapErr((x: any) => +x) as OkImpl<string>;
+test('mapErr on Ok should be infered as Result<string, number>', () => {
+    const ok = Ok('32').mapErr((x: any) => +x);
     expect(ok).toMatchResult(Ok('32'));
-    eq<typeof ok, OkImpl<string>>(true);
+    eq<typeof ok, Result<string, number>>(true);
+});
+test('mapErr', () => {
+    const ok = Ok('32').mapErr();
+    expect(ok).toMatchResult(Ok('32'));
+    eq<typeof ok, Ok<string>>(true);
 });
 
 test('mapOr / mapOrElse', () => {

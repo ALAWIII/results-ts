@@ -644,17 +644,16 @@ export class ErrImpl<E> implements BaseResult<never, E> {
         return this.error;
     }
 
-    map<U = never, _E2 = never>(_mapper?: (val: never) => U): MapperErr<E, U> {
-        return this;
-    }
-
     andThen<T2, E2>(_op?: (val: never) => Result<T2, E2>): Result<T2, E | E2> {
         return this;
     }
     and<U, E2 = E>(_res?: Result<U, E | E2>): Result<U, E> {
         return this;
     }
-    mapErr<E2>(mapper: (val: E) => E2): Result<never, E2> {
+    map<U = never, _E2 = never>(_mapper?: (val: never) => U): MapperErr<E, U> {
+        return this;
+    }
+    mapErr<U = never, E2 = never>(mapper: (val: E) => E2): MapperErr<E2, U> {
         return Err(mapper(this.error));
     }
 
@@ -773,17 +772,16 @@ export class OkImpl<T> implements BaseResult<T, never> {
         throw new Error(msg);
     }
 
-    map<U, E2 = never>(mapper: (val: T) => U): MapperOk<U, E2> {
-        return Ok(mapper(this.value));
-    }
-
     andThen<T2, E2>(mapper: (val: T) => Result<T2, E2>): Result<T2, E2> {
         return mapper(this.value);
     }
     and<U, E2>(res: Result<U, E2>): Result<U, E2> {
         return res;
     }
-    mapErr<F>(_mapper?: (val: never) => F): Result<T, F> {
+    map<U, E2 = never>(mapper: (val: T) => U): MapperOk<U, E2> {
+        return Ok(mapper(this.value));
+    }
+    mapErr<_U = never, E2 = never>(_mapper?: (val: never) => E2): MapperOk<T, E2> {
         return this;
     }
 
