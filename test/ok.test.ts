@@ -78,9 +78,9 @@ test('unwrapErr', () => {
 });
 
 test('map', () => {
-    const mapped = Ok(3).map((x) => x.toString(10)) as OkImpl<string>;
+    const mapped = Ok(3).map<string, number>((x) => x.toString(10));
     expect(mapped).toMatchResult(Ok('3'));
-    eq<typeof mapped, OkImpl<string>>(true);
+    eq<typeof mapped, Result<string, number>>(true);
 });
 
 test('andThen', () => {

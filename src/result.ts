@@ -90,7 +90,12 @@ type TransposeOkReturnType<T, E = never> = [T] extends [Some<infer U>]
       ? None
       : Some<Clean<E, ErrImpl<E>, Result<T, E>>>;
 type TransposeErrReturnType<E, T = never> = Clean<T, Some<Err<E>>, Some<Result<T, E>>>;
-//================
+//================ mapping helpers
+
+type MapperOk<T, E = never> = Clean<E, OkImpl<T>, Result<T, E>>;
+type MapperErr<E, T = never> = Clean<T, ErrImpl<E>, Result<T, E>>;
+
+//=======================================================
 interface BaseResult<T, E> extends Iterable<T> {
     /** `true` when the result is Ok */
     isOk(): this is OkImpl<T>;
@@ -286,7 +291,7 @@ interface BaseResult<T, E> extends Iterable<T> {
      * badResult.map((num) => num + 1).unwrap(); // throws Error("something went wrong")
      * ```
      */
-    map<U>(mapper: (val: T) => U): Result<U, E>;
+    map<U = never, E2 = never>(mapper: (val: T) => U): Result<U, E>;
 
     /**
      * Maps a `Result<T, E>` to `Result<T, F>` by applying a function to a contained `Err` value,
@@ -639,7 +644,7 @@ export class ErrImpl<E> implements BaseResult<never, E> {
         return this.error;
     }
 
-    map<U>(_mapper?: (val: never) => U): Result<never, E> {
+    map<U = never, _E2 = never>(_mapper?: (val: never) => U): MapperErr<E, U> {
         return this;
     }
 
@@ -768,7 +773,7 @@ export class OkImpl<T> implements BaseResult<T, never> {
         throw new Error(msg);
     }
 
-    map<U>(mapper: (val: T) => U): Result<U, never> {
+    map<U, E2 = never>(mapper: (val: T) => U): MapperOk<U, E2> {
         return Ok(mapper(this.value));
     }
 

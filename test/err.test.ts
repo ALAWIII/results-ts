@@ -81,9 +81,11 @@ test('unwrapErr', () => {
 });
 
 test('map', () => {
-    const err = Err(3).map((x: any) => Symbol()) as ErrImpl<number>;
+    const err = Err(3).map((x: any) => Symbol());
     expect(err).toMatchResult(Err(3));
-    eq<typeof err, ErrImpl<number>>(true);
+    eq<typeof err, Result<symbol, number>>(true);
+    const err2 = Err(3).map();
+    eq<typeof err2, ErrImpl<number>>(true);
 });
 
 test('andThen', () => {
