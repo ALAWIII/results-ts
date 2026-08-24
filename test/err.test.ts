@@ -1,5 +1,5 @@
 import { assert } from 'conditional-type-checks';
-import { Err, ErrImpl, None, Ok, Option, Result, Some, SomeImpl } from '../src/index.js';
+import { Err, ErrImpl, None, Ok, Result, Some, SomeImpl } from '../src/index.js';
 import { eq, expect_never } from './util.js';
 
 test('Constructable & Callable', () => {
@@ -83,7 +83,28 @@ test('unwrapErr', () => {
 test('andThen', () => {
     const err = Err('Err').andThen(() => Ok(3));
     expect(err).toMatchResult(Err('Err'));
-    eq<typeof err, Result<number, unknown>>(true);
+    eq<typeof err, ErrImpl<string>>(true);
+});
+test('invoke chain of andThen should preserve the original Err type untouched.', () => {
+    const err = Err('Err')
+        .andThen(() => Ok(3))
+        .andThen(() => Err(8))
+        .andThen(() => Ok('string'));
+    expect(err).toMatchResult(Err('Err'));
+    eq<typeof err, ErrImpl<string>>(true);
+});
+
+test('Err.and', () => {
+    const err = Err(2).and(Err(3245));
+    eq<typeof err, ErrImpl<number>>(true);
+    expect(err.and(Ok(3)).err().unwrap()).toBe(2);
+    expect(err.and(Err(4)).err().unwrap()).toBe(2);
+    expect(err.and()).toBe(err);
+});
+test('invoke chain of Err.and should preserve original Err type untouched.', () => {
+    const err = Err(2).and(Err(3245)).and(Ok('shsjf'));
+    eq<typeof err, ErrImpl<number>>(true);
+    expect(err.and(Ok(3)).err().unwrap()).toBe(2);
 });
 test('map', () => {
     const err = Err(3).map((x: any) => Symbol());
@@ -156,13 +177,6 @@ test('Err.inspectErr', () => {
     expect(result).toBe(err);
     expect(called).toBe(true);
     expect(capturedValue).toBe(55);
-});
-
-test('Err.and', () => {
-    const err = Err(2);
-    expect(err.and(Ok(3)).err().unwrap()).toBe(2);
-    expect(err.and(Err(4)).err().unwrap()).toBe(2);
-    expect(err.and()).toBe(err);
 });
 
 describe('Err.flatten', () => {

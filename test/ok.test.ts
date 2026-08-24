@@ -78,13 +78,59 @@ test('unwrapErr', () => {
 });
 
 test('andThen', () => {
-    const ok = Ok('Ok').andThen(() => Ok(3));
-    expect(ok).toMatchResult(Ok(3));
-    eq<typeof ok, Result<number, unknown>>(true);
+    const ok = Ok('Ok')
+        .andThen(() => Ok(3))
+        .map((v) => v + 1);
+    expect(ok).toMatchResult(Ok(4));
+    eq<typeof ok, OkImpl<number>>(true);
 
     const err = Ok('Ok').andThen(() => Err(false));
     expect(err).toMatchResult(Err(false));
-    eq<typeof err, Result<unknown, boolean>>(true);
+    eq<typeof err, ErrImpl<boolean>>(true);
+});
+test('test inference when calling a chain of andThen.', () => {
+    const ok = Ok('Ok')
+        .andThen(() => Ok(3))
+        .andThen(() => Ok(4))
+        .andThen(() => Ok(4))
+        .andThen(() => Ok(4))
+        .andThen(() => Ok(4))
+        .map((v) => v + 1);
+    expect(ok).toMatchResult(Ok(5));
+    eq<typeof ok, OkImpl<number>>(true);
+});
+test('test inference when calling a chain of andThen ends with Err.', () => {
+    const ok = Ok('Ok')
+        .andThen(() => Ok(3))
+        .andThen(() => Ok(4))
+        .andThen(() => Err(4))
+        .andThen(() => Err(4))
+        .map((v) => 'v + 1');
+    expect(ok).toMatchResult(Err(4));
+    eq<typeof ok, Result<string, number>>(true);
+});
+test('Ok.and', () => {
+    const ok = Ok(2);
+    expect(ok.and(Ok(3)).unwrap()).toBe(3);
+    expect(ok.and(Err(4)).err().unwrap()).toBe(4);
+});
+test('should correctly auto infer types when calling chain of and\s', () => {
+    const ok = Ok(2).and(Ok(43));
+    expect(ok).toMatchResult(Ok(43));
+    eq<typeof ok, OkImpl<number>>(true);
+    const ok2 = ok.and(Ok(7)).and(Ok('hello'));
+    expect(ok2).toMatchResult(Ok('hello'));
+    eq<typeof ok2, OkImpl<string>>(true);
+});
+test('should correctly auto infer types when calling chain of and\s ends with Err', () => {
+    const err = Ok(2)
+        .and(Ok(43))
+        .and(Ok('hi'))
+        .and(Err('error1'))
+        .and(Err({ err: 'Unreachable', no: 31 }));
+    expect(err).toMatchResult(Err('error1'));
+    expect(err).not.toMatchResult(Err('Unreachable'));
+    eq<typeof err, ErrImpl<string>>(true);
 });
 test('map', () => {
     const mapped = Ok(3).map<string, number>((x) => x.toString(10));
@@ -156,11 +202,7 @@ test('Ok.inspectErr', () => {
     expect(err.inspectErr()).toBe(err); // Same instance
     expect(err.inspectErr()).toEqual(err); // Same value
 });
-test('Ok.and', () => {
-    const ok = Ok(2);
-    expect(ok.and(Ok(3)).unwrap()).toBe(3);
-    expect(ok.and(Err(4)).err().unwrap()).toBe(4);
-});
+
 //=============== Result.flatten
 describe('Ok.flatten', () => {
     test('should correctly infer the types after invoking flatten on Ok', () => {

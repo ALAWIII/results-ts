@@ -94,7 +94,15 @@ type TransposeErrReturnType<E, T = never> = Clean<T, Some<Err<E>>, Some<Result<T
 
 type MapperOk<T, E = never> = Clean<E, OkImpl<T>, Result<T, E>>;
 type MapperErr<E, T = never> = Clean<T, ErrImpl<E>, Result<T, E>>;
-
+//======================= andThen,and
+/**
+ * Used in `OkImpl.and` and `OkImpl.andThen` to correctly infer the types returned.
+ */
+type AndResult<T2, E2, R = Result<T2, E2>> = [R] extends [OkImpl<infer O>]
+    ? OkImpl<O>
+    : [R] extends [ErrImpl<infer E>]
+      ? ErrImpl<E>
+      : R;
 //=======================================================
 interface BaseResult<T, E> extends Iterable<T> {
     /** `true` when the result is Ok */
@@ -256,7 +264,7 @@ interface BaseResult<T, E> extends Iterable<T> {
      *     .unwrap(); // throws Error('mapped')
      * ```
      */
-    andThen<T2, E2>(mapper: (val: T) => Result<T2, E2>): Result<T2, E | E2>;
+    andThen(mapper: (val: T) => any): any;
 
     /**
      * Returns `res` if the result is `Ok`, otherwise returns the `Err` value of self.
@@ -275,7 +283,7 @@ interface BaseResult<T, E> extends Iterable<T> {
      * console.log(okAndOk) // prints Ok(9)
      * ```
      */
-    and<U, E2 = E>(res: Result<U, E | E2>): Result<U, E | E2>;
+    and(res: any): any;
     /**
      * Maps a `Result<T, E>` to `Result<U, E>` by applying a function to a contained `Ok` value,
      * leaving an `Err` value untouched.
@@ -644,10 +652,10 @@ export class ErrImpl<E> implements BaseResult<never, E> {
         return this.error;
     }
 
-    andThen<T2, E2>(_op?: (val: never) => Result<T2, E2>): Result<T2, E | E2> {
+    andThen(_op?: unknown): ErrImpl<E> {
         return this;
     }
-    and<U, E2 = E>(_res?: Result<U, E | E2>): Result<U, E> {
+    and(_res?: unknown): ErrImpl<E> {
         return this;
     }
     map<U = never, _E2 = never>(_mapper?: (val: never) => U): MapperErr<E, U> {
@@ -772,12 +780,6 @@ export class OkImpl<T> implements BaseResult<T, never> {
         throw new Error(msg);
     }
 
-    andThen<T2, E2>(mapper: (val: T) => Result<T2, E2>): Result<T2, E2> {
-        return mapper(this.value);
-    }
-    and<U, E2>(res: Result<U, E2>): Result<U, E2> {
-        return res;
-    }
     map<U, E2 = never>(mapper: (val: T) => U): MapperOk<U, E2> {
         return Ok(mapper(this.value));
     }
@@ -791,6 +793,12 @@ export class OkImpl<T> implements BaseResult<T, never> {
 
     mapOrElse<U>(_default_: (_error: never) => U, mapper: (val: T) => U): U {
         return mapper(this.value);
+    }
+    andThen<T2, E2, R extends Result<T2, E2> = Result<T2, E2>>(mapper: (val: T) => R): AndResult<T2, E2, R> {
+        return mapper(this.value) as AndResult<T2, E2, R>;
+    }
+    and<T2, E2, R extends Result<T2, E2> = Result<T2, E2>>(res: R): AndResult<T2, E2, R> {
+        return res as AndResult<T2, E2, R>;
     }
 
     or<T2, E2>(_other?: Result<T2, E2>): Result<T, E2> {
