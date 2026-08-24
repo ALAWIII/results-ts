@@ -291,7 +291,7 @@ interface BaseResult<T, E> extends Iterable<T> {
      * badResult.map((num) => num + 1).unwrap(); // throws Error("something went wrong")
      * ```
      */
-    map<U = never, E2 = never>(mapper: (val: T) => U): Result<U, E>;
+    map<U = never, _E2 = never>(mapper: (val: T) => U): Result<U, E>;
 
     /**
      * Maps a `Result<T, E>` to `Result<T, F>` by applying a function to a contained `Err` value,
