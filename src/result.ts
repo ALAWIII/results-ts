@@ -228,7 +228,8 @@ interface BaseResult<T, E> extends Iterable<T> {
      * The function is called at most one time, only if needed.
      *
      * @example
-     * ```
+     *
+     * ```typescript
      * Ok('OK').unwrapOrElse(
      *     (error) => { console.log(`Called, got ${error}`); return 'UGH'; }
      * ) // => 'OK', nothing printed
@@ -326,8 +327,9 @@ interface BaseResult<T, E> extends Iterable<T> {
     mapErr<F>(mapper: (val: E) => F): Result<T, F>;
 
     /**
-     * Maps a `Result<T, E>` to `Result<U, E>` by either converting `T` to `U` using `mapper`
-     * (in case of `Ok`) or using the `default_` value (in case of `Err`).
+     * Returns the mapped value `U` if `Ok`, using `mapper` on the contained value,
+     * or returns `default_` if `Err`. Unlike `map`, this always returns a plain `U`,
+     * not a `Result<U, E>`.
      *
      * If `default` is a result of a function call consider using `mapOrElse` instead, it will
      * only evaluate the function when needed.
@@ -344,9 +346,14 @@ interface BaseResult<T, E> extends Iterable<T> {
     mapOr<U>(default_: U, mapper: (val: T) => U): U;
 
     /**
-     * Maps a `Result<T, E>` to `Result<U, E>` by either converting `T` to `U` using `mapper`
-     * (in case of `Ok`) or producing a default value using the `default` function (in case of
-     * `Err`).
+     * Returns a value of type `U` by:
+     * - applying `mapper` to the contained value if this is `Ok(T)`, or
+     * - applying `default_` to the error if this is `Err(E)`.
+     *
+     * Unlike `map` or `mapErr`, this method always returns a plain `U`, not a `Result<U, E>`.
+     * Use this when you want to fully unwrap the `Result` and provide a fallback computed from the error.
+     *
+     * `default_` is called lazily, only when the result is `Err`.
      *
      * @example
      * ```typescript
@@ -391,8 +398,8 @@ interface BaseResult<T, E> extends Iterable<T> {
      *
      * @example
      *
-     * Ok(5).toOption() // evaluates to Some(5)
-     * Err('your error').toOption() // evaluates to None
+     * Ok(5).ok() // evaluates to Some(5)
+     * Err('your error').ok() // evaluates to None
      */
     ok(): Option<T>;
     /**
@@ -402,8 +409,8 @@ interface BaseResult<T, E> extends Iterable<T> {
      *
      * @example
      *
-     * Err('your error').toError() // evaluates to Some('your error')
-     * Ok(5).toError() // evaluates to None
+     * Err('your error').err() // evaluates to Some('your error')
+     * Ok(5).err() // evaluates to None
      *
      */
     err(): Option<E>;
