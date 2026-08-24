@@ -610,7 +610,15 @@ describe('Option.transpose', () => {
         eq<typeof result3, Result<Option<number>, never>>(true);
         eq<typeof result4, Result<Option<unknown>, never>>(true);
     });
-
+    test('should correctly infer the type after calling transpose 3 and 5 times on a chain.', () => {
+        const opt = None;
+        const result = opt.transpose().transpose().transpose<number, string>();
+        const result2 = opt.transpose().transpose().transpose();
+        const result3 = opt.transpose().transpose().transpose().transpose().transpose();
+        eq<typeof result, Result<Option<number>, string>>(true);
+        eq<typeof result2, Result<Option<never>, never>>(true);
+        eq<typeof result3, Result<Option<never>, never>>(true);
+    });
     // None case
     test('None.transpose() should return Ok(None)', () => {
         const result = None.transpose();
