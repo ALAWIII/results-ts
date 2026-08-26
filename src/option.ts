@@ -373,17 +373,10 @@ abstract class BaseOption<T> implements Iterable<T> {
      */
     transpose(): TransposeOption<T>;
     transpose(): any {
-        if (this.isSome()) {
-            const someValue = this.unwrap() as T;
-            if (Result.isResult(someValue)) {
-                if (someValue.isOk()) {
-                    return Ok(Some(someValue.value));
-                }
-                return someValue;
-            }
-            return Ok(Some(someValue));
-        }
-        return this;
+        if (this.isNone()) return this;
+        const innerRes = this.unwrap();
+        if (!Result.isResult(innerRes)) return Ok(Some(innerRes));
+        return innerRes.isOk() ? Ok(Some(innerRes.value)) : innerRes;
     }
     /**
      * Creates an `AsyncOption` based on this `Option`.
