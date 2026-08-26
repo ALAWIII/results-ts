@@ -562,17 +562,10 @@ abstract class BaseResult<T, E> implements Iterable<T> {
      */
     transpose(): TransposeResult<T, E>;
     transpose(): any {
-        if (this.isOk()) {
-            const oKValue = this.unwrap() as T;
-            if (Option.isOption(oKValue)) {
-                if (oKValue.isSome()) {
-                    return Some(Ok(oKValue.unwrap()));
-                }
-                return None();
-            }
-            return Some(Ok(oKValue));
-        }
-        return Some(this);
+        if (this.isErr()) return Some(this);
+        const opt = this.unwrap();
+        if (!Option.isOption(opt)) return Some(Ok(opt));
+        return opt.isSome() ? Some(Ok(opt.unwrap())) : None();
     }
 }
 
