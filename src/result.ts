@@ -772,12 +772,12 @@ export class OkImpl<T, E> extends BaseResult<T, E> {
         return res;
     }
 
-    or<F>(_other?: Result<T, F>): Result<T, E> {
-        return this;
+    or<F>(_other?: Result<T, F>): Result<T, F> {
+        return this as unknown as Result<T, F>;
     }
 
-    orElse<F>(_other?: (error: E) => Result<T, F>): Result<T, E> {
-        return this;
+    orElse<F>(_other?: (error: E) => Result<T, F>): Result<T, F> {
+        return this as unknown as Result<T, F>;
     }
     ok(): Option<T> {
         return Some(this.value);
