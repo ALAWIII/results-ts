@@ -12,3 +12,5 @@ coverage
 
 # The built documentation
 /docs/_build/
+
+dev-docs
