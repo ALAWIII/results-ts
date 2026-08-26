@@ -2,11 +2,20 @@ import { toString } from './utils.js';
 import { Option, None, Some } from './option.js';
 import { AsyncResult } from './asyncresult.js';
 
-//========================= flatten related types.
+//=================================== transpose helpers
 /**
- * used in flatten implementation.
+ * used in transpose implementation.
+ * - if `T` is `Some<U>` if yes then if `E` is provided return `Result<U, E>` otherwise return `OkImpl<U>`.
+ * - if `T` is `None` return `None`
+ * - otherwise: wrap `T` with `Some<OkImpl<U>>` or `Result<U,E>` and return it.
  */
-type IsNever<V> = [V] extends [never] ? true : false;
+type TransposeResult<T, E> =
+    IsNever<T> extends false
+        ? T extends Option<infer U>
+            ? Option<Result<U, E>>
+            : Option<Result<T, E>>
+        : Option<Result<T, E>>;
+//========================= flatten related types.
 
 /**
  * if `V` is never then return Res otherwise Fallback
@@ -16,110 +25,72 @@ type IsNever<V> = [V] extends [never] ? true : false;
  *
  */
 type Clean<V, Res, Fallback> = IsNever<V> extends true ? Res : Fallback;
+/**
+ * checks if a given value is never.
+ */
+type IsNever<V> = [V] extends [never] ? true : false;
 
-/**
- * if `T` is `Ok` then check if user provided custome error type `E2`  then attach it and return `Result<U,E2>`, othewise return inner `Ok<U>` of `T` .
- *
- * if `T` is `Err` then check if user provided custome value type `T2` then attach it and return `Result<T2,E>`, otherwise return inner `Err<E>` of `T`.
- *
- * if `T` is not `Result` then if user provided custome error type `E2` then attach it and return `Result<T,E2>`, otherwise return OkImpl<T> directly
- */
-type FlattenOk<T, T2 = never, E2 = never> = [T] extends [OkImpl<infer U>]
-    ? Clean<E2, OkImpl<U>, Result<U, E2>>
-    : [T] extends [ErrImpl<infer E>]
-      ? Clean<T2, ErrImpl<E>, Result<T2, E>>
-      : Clean<E2, OkImpl<T>, Result<T, E2>>;
-
-/**
- * this used to check if `E` is `Err` then if user proides `T2` attach it and return `Result< T2, E=ErrImpl<M>>`, otherwise just return `E=ErrImpl<M>`, or if `E` isnt `Err` return `E`.
- */
-type FlattenErr<E, T2 = never> = [E] extends [ErrImpl<infer M>] ? Clean<T2, ErrImpl<M>, Result<T2, M>> : E;
-// ============= collapse related types helpers
-/**
- * Checks if the given depth `D` is positive, used in collapse implementations.
- */
-type IsNonPositive<D extends number> = `${D}` extends `-${string}` ? true : D extends 0 ? true : false;
+//===========================
 /**
  *  Full flatten (no depth bound) — used when no depth arg is given
- *  - if `T` is `Ok` then obtain its value `InnerT` and pass it again down.
- *  - if `T` is `Err` then obtain its value `E` and check if `T2` was provided if yes then return `Result<T2,E>` otherwise return `ErrImpl<E>`.
- *  - otherwise check if `E2` was provided , if yes then return `Result<T,E2>` otherwise return `OkImpl<T>`.
- */
-type DeepInner<T, T2 = never, E2 = never> = [T] extends [OkImpl<infer InnerT>]
-    ? DeepInner<InnerT, T2, E2>
-    : [T] extends [ErrImpl<infer E>]
-      ? Clean<T2, ErrImpl<E>, Result<T2, E>>
-      : Clean<E2, OkImpl<T>, Result<T, E2>>;
-// Bounded flatten — recursion count tracked in the Acc tuple, mirrors the runtime loop
-type DeepInnerN<T, D extends number, T2 = never, E2 = never> =
-    IsNonPositive<D> extends true ? T : CollapseResult<T, D, T2, E2>;
 
-/**
- * - check if `T` is `OkImpl` if yes then if `E2` was provided return `Result<FinalT,E2>` otherwise fallback and return `OkImpl<FinalT>`
- * - check if `T` is `ErrImpl` if yes then if `T2` was provided return `Result<T2,FinalE>` otherwise fallback and return `OkImpl<FinalE>`
- * - othewise return T.
  */
-type ReachedDepthCondition<T, T2 = never, E2 = never> = [T] extends [OkImpl<infer FinalT>]
-    ? Clean<E2, OkImpl<FinalT>, Result<FinalT, E2>>
-    : [T] extends [ErrImpl<infer FinalE>]
-      ? Clean<T2, ErrImpl<FinalE>, Result<T2, FinalE>>
-      : T;
-/**
- * - check recursively if `Acc` reached depth if yes then invoke `ReachedDepthCondition`,
- * - othewise: if `T` is `OkImpl` then extract its `InnerT` and pass it down again to `CollapseResult`
- * - otherwise: if `T` is `ErrImpl` then extract its `E` and then check if `T2` was provided then return `Result<T2,E>` otherwise just return `ErrImpl<E>`
- * - if `T` is not `Result` then check if `E2` was provided if yes then wrap `T` with `OkImpl` and return `Result<T,E2>` otherwise just return `OkImpl<T>`.
- */
-type CollapseResult<T, D extends number, T2 = never, E2 = never, Acc extends unknown[] = []> = Acc['length'] extends D
-    ? ReachedDepthCondition<T, T2, E2>
-    : [T] extends [OkImpl<infer InnerT>]
-      ? CollapseResult<InnerT, D, T2, E2, [...Acc, unknown]>
-      : [T] extends [ErrImpl<infer E>]
-        ? Clean<T2, ErrImpl<E>, Result<T2, E>>
-        : Clean<E2, OkImpl<T>, Result<T, E2>>;
-//=================================== transpose helpers
-/**
- * used in transpose implementation.
- * - if `T` is `Some<U>` if yes then if `E` is provided return `Result<U, E>` otherwise return `OkImpl<U>`.
- * - if `T` is `None` return `None`
- * - otherwise: wrap `T` with `Some<OkImpl<U>>` or `Result<U,E>` and return it.
- */
-type TransposeOkReturnType<T, E = never> = [T] extends [Some<infer U>]
-    ? Some<Clean<E, OkImpl<U>, Result<U, E>>>
-    : [T] extends [None]
-      ? None
-      : Some<Clean<E, ErrImpl<E>, Result<T, E>>>;
-type TransposeErrReturnType<E, T = never> = Clean<T, Some<Err<E>>, Some<Result<T, E>>>;
+type DeepFlatten<T, E> =
+    IsNever<T> extends false
+        ? T extends Result<infer InnerT, infer InnerE>
+            ? IsNever<InnerT> extends false
+                ? DeepFlatten<InnerT, InnerE>
+                : // if InnerT is never
+                  Result<InnerT, InnerE>
+            : // if T isn't never and Result
+              Result<T, E>
+        : // if T is never
+          Result<T, E>;
+type CollapseResult<T, E> = DeepFlatten<T, E>;
+
+// Flatten up to depth D while maintaining pristine Result structures
+type ReachedDepthCondintion<L extends number, D extends number> = L extends D ? true : false;
+type DeepFlattenN<T, E, D extends number, Acc extends unknown[] = []> =
+    ReachedDepthCondintion<Acc['length'], D> extends false
+        ? IsNever<T> extends false
+            ? T extends Result<infer InnerT, infer InnerE>
+                ? DeepFlattenN<InnerT, InnerE, D, [...Acc, unknown]>
+                : // if T isnt never neither Result
+                  Result<T, E>
+            : // if T is never
+              Result<T, E>
+        : // if the depth was reached
+          Result<T, E>;
+
+type IsNonPositive<D extends number> = `${D}` extends `-${string}` ? true : D extends 0 ? true : false;
+type CollapseResultN<T, E, D extends number> = IsNonPositive<D> extends true ? Result<T, E> : DeepFlattenN<T, E, D>;
+
 //================ mapping helpers
 
-type MapperOk<T, E = never> = Clean<E, OkImpl<T>, Result<T, E>>;
-type MapperErr<E, T = never> = Clean<T, ErrImpl<E>, Result<T, E>>;
+// type MapperOk<T, E = never> = Clean<E, OkImpl<T>, Result<T, E>>;
+// type MapperErr<E, T = never> = Clean<T, ErrImpl<E>, Result<T, E>>;
 //======================= andThen, and, orElse, or
 /**
  * Used in `OkImpl.and` | `ErrImpl.or`  and `OkImpl.andThen` | `ErrImpl.orElse` to correctly infer the types returned.
  */
-type AndOrResult<T2, E2, R = Result<T2, E2>> = [R] extends [OkImpl<infer O>]
-    ? OkImpl<O>
-    : [R] extends [ErrImpl<infer E>]
-      ? ErrImpl<E>
-      : R;
 
 //=======================================================
-interface BaseResult<T, E> extends Iterable<T> {
+abstract class BaseResult<T, E> implements Iterable<T> {
+    abstract [Symbol.iterator](): any;
     /** `true` when the result is Ok */
-    isOk(): this is OkImpl<T>;
+    abstract isOk(): this is OkImpl<T, E>;
 
     /**
      * Returns true if the result is Ok and the value inside of it matches a predicate
      */
-    isOkAnd(f: (v: T) => boolean): boolean;
+    abstract isOkAnd(f: (v: T) => boolean): boolean;
     /** `true` when the result is Err */
-    isErr(): this is ErrImpl<E>;
+    abstract isErr(): this is ErrImpl<E, T>;
 
     /**
      * Returns true if the result is Err and the value inside of it matches a predicate
      */
-    isErrAnd(f: (e: E) => boolean): boolean;
+    abstract isErrAnd(f: (e: E) => boolean): boolean;
     /**
      * Returns the contained `Ok` value, if exists.  Throws an error if not.
      *
@@ -143,7 +114,7 @@ interface BaseResult<T, E> extends Iterable<T> {
      * badResult.expect('badResult should be a number'); // throws Error("badResult should be a number - Error: something went wrong")
      * ```
      */
-    expect(msg: string): T;
+    abstract expect(msg: string): T;
 
     /**
      * Returns the contained `Err` value, if exists.  Throws an error if not.
@@ -158,7 +129,7 @@ interface BaseResult<T, E> extends Iterable<T> {
      * badResult.expectErr('badResult should not be a number'); // new Error('something went wrong')
      * ```
      */
-    expectErr(msg: string): E;
+    abstract expectErr(msg: string): E;
 
     /**
      * Returns the contained `Ok` value.
@@ -183,7 +154,7 @@ interface BaseResult<T, E> extends Iterable<T> {
      * badResult.unwrap(); // throws Error("something went wrong")
      * ```
      */
-    unwrap(): T;
+    abstract unwrap(): T;
 
     /**
      * Returns the contained `Err` value.
@@ -204,7 +175,7 @@ interface BaseResult<T, E> extends Iterable<T> {
      * badResult.unwrapErr(); // returns 'something went wrong'
      * ```
      */
-    unwrapErr(): E;
+    abstract unwrapErr(): E;
 
     /**
      * Returns the contained `Ok` value or a provided default.
@@ -220,7 +191,7 @@ interface BaseResult<T, E> extends Iterable<T> {
      * badResult.unwrapOr(5); // 5
      * ```
      */
-    unwrapOr<T2>(val: T2): T | T2;
+    abstract unwrapOr(val: T): T;
 
     /**
      * Returns the contained `Ok` value or computes a value with a provided function.
@@ -237,7 +208,7 @@ interface BaseResult<T, E> extends Iterable<T> {
      * Err('A03B').unwrapOrElse((error) => `UGH, got ${error}`) // => 'UGH, got A03B'
      * ```
      */
-    unwrapOrElse<T2>(f: (error: E) => T2): T | T2;
+    abstract unwrapOrElse(f: (error: E) => T): T;
 
     /**
      * Calls `mapper` if the result is `Ok`, otherwise returns the `Err` value of self.
@@ -266,7 +237,7 @@ interface BaseResult<T, E> extends Iterable<T> {
      *     .unwrap(); // throws Error('mapped')
      * ```
      */
-    andThen(mapper: (val: T) => any): any;
+    abstract andThen<U>(mapper: (val: T) => Result<U, E>): any;
 
     /**
      * Returns `res` if the result is `Ok`, otherwise returns the `Err` value of self.
@@ -285,7 +256,7 @@ interface BaseResult<T, E> extends Iterable<T> {
      * console.log(okAndOk) // prints Ok(9)
      * ```
      */
-    and(res: any): any;
+    abstract and<U>(res: Result<U, E>): any;
     /**
      * Maps a `Result<T, E>` to `Result<U, E>` by applying a function to a contained `Ok` value,
      * leaving an `Err` value untouched.
@@ -301,7 +272,7 @@ interface BaseResult<T, E> extends Iterable<T> {
      * badResult.map((num) => num + 1).unwrap(); // throws Error("something went wrong")
      * ```
      */
-    map<U = never, _E2 = never>(mapper: (val: T) => U): Result<U, E>;
+    abstract map<U>(mapper: (v: T) => U): any;
 
     /**
      * Maps a `Result<T, E>` to `Result<T, F>` by applying a function to a contained `Err` value,
@@ -324,7 +295,7 @@ interface BaseResult<T, E> extends Iterable<T> {
      *     .unwrap(); // throws Error("mapped")
      * ```
      */
-    mapErr<F>(mapper: (val: E) => F): Result<T, F>;
+    abstract mapErr<F>(mapper: (val: E) => F): any;
 
     /**
      * Returns the mapped value `U` if `Ok`, using `mapper` on the contained value,
@@ -343,7 +314,7 @@ interface BaseResult<T, E> extends Iterable<T> {
      * badResult.mapOr(0, (value) => -value) // 0
      * ```
      */
-    mapOr<U>(default_: U, mapper: (val: T) => U): U;
+    abstract mapOr<U>(default_: U, mapper: (val: T) => U): U;
 
     /**
      * Returns a value of type `U` by:
@@ -364,7 +335,7 @@ interface BaseResult<T, E> extends Iterable<T> {
      * badResult.mapOrElse((_error) => 0, (value) => -value) // 0
      * ```
      */
-    mapOrElse<U>(default_: (error: E) => U, mapper: (val: T) => U): U;
+    abstract mapOrElse<U>(default_: (error: E) => U, mapper: (val: T) => U): U;
 
     /**
      * Returns `Ok()` if we have a value, otherwise returns `other`.
@@ -377,7 +348,7 @@ interface BaseResult<T, E> extends Iterable<T> {
      * Ok(1).or(Ok(2)) // => Ok(1)
      * Err('error here').or(Ok(2)) // => Ok(2)
      */
-    or(other: any): any;
+    abstract or<F>(other?: Result<T, F>): any;
     /**
      * Returns `Ok()` if we have a value, otherwise returns the result
      * of calling `other()`.
@@ -389,7 +360,7 @@ interface BaseResult<T, E> extends Iterable<T> {
      * Ok(1).orElse(() => Ok(2)) // => Ok(1)
      * Err('error').orElse(() => Ok(2)) // => Ok(2)
      */
-    orElse(other: (error: E) => any): any;
+    abstract orElse<F>(other?: (error: E) => Result<T, F>): any;
 
     /**
      *  Converts from `Result<T, E>` to `Option<T>`, discarding the error if any
@@ -401,7 +372,7 @@ interface BaseResult<T, E> extends Iterable<T> {
      * Ok(5).ok() // evaluates to Some(5)
      * Err('your error').ok() // evaluates to None
      */
-    ok(): Option<T>;
+    abstract ok(): Option<T>;
     /**
      *  Converts from `Result<T, E>` to `Option<E>`, discarding the value if any
      *
@@ -413,13 +384,13 @@ interface BaseResult<T, E> extends Iterable<T> {
      * Ok(5).err() // evaluates to None
      *
      */
-    err(): Option<E>;
+    abstract err(): Option<E>;
     /**
      * Creates an `AsyncResult` based on this `Result`.
      *
      * Useful when you need to compose results with asynchronous code.
      */
-    toAsyncResult(): AsyncResult<T, E>;
+    abstract toAsyncResult(): AsyncResult<T, E>;
     /**
      *
      * Calls a function with a reference to the contained value if `Ok`.
@@ -433,7 +404,7 @@ interface BaseResult<T, E> extends Iterable<T> {
      * const errResult = (Err('Failure') as Result<number,string>).inspect((v)=>console.log(v)); // since its of type Result it accepts the closure but its useless.
      * ```
      */
-    inspect(f: (v: T) => void): Result<T, E>;
+    abstract inspect(f: (v: T) => void): Result<T, E>;
     /**
      *
      * Calls a function with a reference to the contained value if `Err`.
@@ -447,7 +418,7 @@ interface BaseResult<T, E> extends Iterable<T> {
      * const okResult = (Ok(5) as Result<number,string>).inspectErr((v)=>console.log(v)); // since its of type Result it accepts the closure but its useless.
      * ```
      */
-    inspectErr(f: (v: E) => void): Result<T, E>;
+    abstract inspectErr(f: (v: E) => void): Result<T, E>;
     /**
      * Flattens a nested Result structure.
      *
@@ -488,7 +459,9 @@ interface BaseResult<T, E> extends Iterable<T> {
      * @see {@link andThen} for chaining operations without flattening
      * @see {@link map} for transforming the success value
      */
-    flatten(): any;
+    flatten(): CollapseResultN<T, E, 1> {
+        return this.collapse(1);
+    }
     /**
      * Recursively flattens nested Results up to a specified depth.
      *
@@ -538,8 +511,18 @@ interface BaseResult<T, E> extends Iterable<T> {
      * @see {@link flatten} - For single-level flattening
      * @see {@link andThen} - For chaining operations
      */
-    collapse(): any;
-    collapse(depth: number): any;
+    collapse(): CollapseResult<T, E>;
+    collapse<D extends number>(depth: D): CollapseResultN<T, E, D>;
+    collapse(depth: number = Infinity): any {
+        if (depth <= 0 || !this.isOk() || !Result.isResult(this.unwrap())) return this;
+        let result = this as any;
+        let remaining = depth;
+        while (remaining > 0 && result.isOk() && Result.isResult(result.unwrap())) {
+            result = result.unwrap();
+            remaining--;
+        }
+        return result;
+    }
     /**
      * Transposes a `Result` of an `Option` into an `Option` of a `Result`.
      *
@@ -594,13 +577,26 @@ interface BaseResult<T, E> extends Iterable<T> {
      * }
      *
      */
-    transpose(): any;
+    transpose(): TransposeResult<T, E>;
+    transpose(): any {
+        if (this.isOk()) {
+            const oKValue = this.unwrap() as T;
+            if (Option.isOption(oKValue)) {
+                if (oKValue.isSome()) {
+                    return Some(Ok(oKValue.unwrap()));
+                }
+                return None();
+            }
+            return Some(Ok(oKValue));
+        }
+        return Some(this);
+    }
 }
 
 /**
  * Contains the error value
  */
-export class ErrImpl<E> implements BaseResult<never, E> {
+export class ErrImpl<E, T> extends BaseResult<T, E> {
     /**
      * An empty Err
      *
@@ -609,10 +605,11 @@ export class ErrImpl<E> implements BaseResult<never, E> {
      * const x: Result<string, void> = Err.EMPTY
      * ```
      */
-    static readonly EMPTY = new ErrImpl<void>(undefined);
+    static readonly EMPTY = new ErrImpl<void, void>(undefined);
     readonly error!: E;
 
     constructor(val: E) {
+        super();
         this.error = val;
     }
     [Symbol.iterator](): Iterator<never, never, any> {
@@ -622,13 +619,13 @@ export class ErrImpl<E> implements BaseResult<never, E> {
             },
         };
     }
-    isOk(): this is OkImpl<never> {
+    isOk(): this is OkImpl<T, E> {
         return false;
     }
     isOkAnd(_f?: (v: never) => boolean): boolean {
         return false;
     }
-    isErr(): this is ErrImpl<E> {
+    isErr(): this is ErrImpl<E, T> {
         return true;
     }
     isErrAnd(f: (e: E) => boolean): boolean {
@@ -660,16 +657,16 @@ export class ErrImpl<E> implements BaseResult<never, E> {
         return this.error;
     }
 
-    andThen(_op?: unknown): ErrImpl<E> {
+    andThen<U>(_mapper?: (val: T) => Result<U, E>): Result<T, E> {
         return this;
     }
-    and(_res?: unknown): ErrImpl<E> {
+    and<U>(_res?: Result<U, E>): Result<Clean<T, U, T>, E> {
+        return this as Result<Clean<T, U, T>, E>;
+    }
+    map<U>(_mapper?: (v: T) => U): Result<T, E> {
         return this;
     }
-    map<U = never, _E2 = never>(_mapper?: (val: never) => U): MapperErr<E, U> {
-        return this;
-    }
-    mapErr<U = never, E2 = never>(mapper: (val: E) => E2): MapperErr<E2, U> {
+    mapErr<F>(mapper: (val: E) => F): Result<T, F> {
         return Err(mapper(this.error));
     }
 
@@ -681,16 +678,15 @@ export class ErrImpl<E> implements BaseResult<never, E> {
         return default_(this.error);
     }
 
-    or<T2, E2, R extends Result<T2, E2> = Result<T2, E2>>(other: R): AndOrResult<T2, E2, R> {
-        return other as AndOrResult<T2, E2, R>;
+    or<F>(other: Result<T, F>): Result<T, F> {
+        return other;
     }
 
-    orElse<T2, E2, R extends Result<T2, E2> = Result<T2, E2>>(other: (error: E) => R): AndOrResult<T2, E2, R> {
-        return other(this.error) as AndOrResult<T2, E2, R>;
+    orElse<F>(other: (error: E) => Result<T, F>): Result<T, F> {
+        return other(this.error);
     }
-
-    ok(): Option<never> {
-        return None;
+    ok(): Option<T> {
+        return None();
     }
     err(): Option<E> {
         return Some(this.error);
@@ -699,38 +695,27 @@ export class ErrImpl<E> implements BaseResult<never, E> {
         return `Err(${toString(this.error)})`;
     }
 
-    toAsyncResult(): AsyncResult<never, E> {
+    toAsyncResult(): AsyncResult<T, E> {
         return new AsyncResult(this);
     }
-    inspect(_f?: (v: never) => void): Result<never, E> {
+    inspect(_f?: (v: never) => void): Result<T, E> {
         return this;
     }
-    inspectErr(f: (v: E) => void): Result<never, E> {
+    inspectErr(f: (v: E) => void): Result<T, E> {
         f(this.error);
         return this;
     }
-    flatten<T2 = never, _E2 = never>(): FlattenErr<ErrImpl<E>, T2> {
-        return this as FlattenErr<ErrImpl<E>, T2>;
-    }
-    collapse<T2 = never, E2 = never>(): DeepInner<ErrImpl<E>, T2, E2>;
-    collapse<D extends number, T2 = never, E2 = never>(depth: D): DeepInnerN<ErrImpl<E>, D, T2, E2>;
-    collapse(_depth: number = Infinity): any {
-        return this;
-    }
-    transpose<T2 = never, _E2 = E>(): TransposeErrReturnType<E, T2> {
-        return Some(Err(this.error));
-    }
 }
 
-export type Err<E> = ErrImpl<E>;
-export function Err<E>(val: E): ErrImpl<E> {
+export type Err<E, T = never> = Result<T, E>;
+export function Err<E, T = never>(val: E): Result<T, E> {
     return new ErrImpl(val);
 }
 
 /**
  * Contains the success value
  */
-export class OkImpl<T> implements BaseResult<T, never> {
+export class OkImpl<T, E> extends BaseResult<T, E> {
     /**
      * An empty Ok
      *
@@ -739,20 +724,21 @@ export class OkImpl<T> implements BaseResult<T, never> {
      * const x: Result<void, string> = Ok.EMPTY
      * ```
      */
-    static readonly EMPTY = new OkImpl<void>(undefined);
+    static readonly EMPTY = new OkImpl<void, void>(undefined);
     readonly value!: T;
 
     constructor(val: T) {
+        super();
         this.value = val;
     }
 
-    isOk(): this is OkImpl<T> {
+    isOk(): this is OkImpl<T, E> {
         return true;
     }
     isOkAnd(f: (v: T) => boolean): boolean {
         return f(this.value);
     }
-    isErr(): this is ErrImpl<never> {
+    isErr(): this is ErrImpl<E, T> {
         return false;
     }
     isErrAnd(_f?: (e: never) => boolean): boolean {
@@ -762,11 +748,11 @@ export class OkImpl<T> implements BaseResult<T, never> {
         return [this.value][Symbol.iterator]();
     }
 
-    unwrapOr(_val?: unknown): T {
+    unwrapOr(_val?: T): T {
         return this.value;
     }
 
-    unwrapOrElse<T2>(_f?: (error: never) => T2): T {
+    unwrapOrElse(_f?: (error: E) => T): T {
         return this.value;
     }
 
@@ -774,7 +760,7 @@ export class OkImpl<T> implements BaseResult<T, never> {
         return this.value;
     }
 
-    unwrapErr(): never {
+    unwrapErr(): E {
         // The cause casting required because of the current TS definition being overly restrictive
         // (the definition says it has to be an Error while it can be anything).
         // See https://github.com/microsoft/TypeScript/issues/45167
@@ -784,14 +770,14 @@ export class OkImpl<T> implements BaseResult<T, never> {
         return this.value;
     }
 
-    expectErr(msg: string): never {
+    expectErr(msg: string): E {
         throw new Error(msg);
     }
 
-    map<U, E2 = never>(mapper: (val: T) => U): MapperOk<U, E2> {
+    map<U>(mapper: (val: T) => U): Result<U, E> {
         return Ok(mapper(this.value));
     }
-    mapErr<_U = never, E2 = never>(_mapper?: (val: never) => E2): MapperOk<T, E2> {
+    mapErr<F>(_mapper?: (val: E) => F): Result<T, E> {
         return this;
     }
 
@@ -802,89 +788,59 @@ export class OkImpl<T> implements BaseResult<T, never> {
     mapOrElse<U>(_default_: (_error: never) => U, mapper: (val: T) => U): U {
         return mapper(this.value);
     }
-    andThen<T2, E2, R extends Result<T2, E2> = Result<T2, E2>>(mapper: (val: T) => R): AndOrResult<T2, E2, R> {
-        return mapper(this.value) as AndOrResult<T2, E2, R>;
+    andThen<U>(mapper: (val: T) => Result<U, E>): Result<U, E> {
+        return mapper(this.value);
     }
-    and<T2, E2, R extends Result<T2, E2> = Result<T2, E2>>(res: R): AndOrResult<T2, E2, R> {
-        return res as AndOrResult<T2, E2, R>;
+    and<U>(res: Result<U, E>): Result<Clean<U, T, U>, E> {
+        return res as Result<Clean<U, T, U>, E>;
     }
 
-    or(_other?: unknown): OkImpl<T> {
+    or<F>(_other?: Result<T, F>): Result<T, E> {
         return this;
     }
 
-    orElse(_other?: unknown): OkImpl<T> {
+    orElse<F>(_other?: (error: E) => Result<T, F>): Result<T, E> {
         return this;
     }
-
     ok(): Option<T> {
         return Some(this.value);
     }
-    err(): Option<never> {
-        return None;
+    err(): Option<E> {
+        return None();
     }
     toString(): string {
         return `Ok(${toString(this.value)})`;
     }
 
-    toAsyncResult(): AsyncResult<T, never> {
+    toAsyncResult(): AsyncResult<T, E> {
         return new AsyncResult(this);
     }
-    inspect(f: (v: T) => void): Result<T, never> {
+    inspect(f: (v: T) => void): Result<T, E> {
         f(this.value);
         return this;
     }
-    inspectErr(_f?: (v: never) => void): Result<T, never> {
+    inspectErr(_f?: (v: never) => void): Result<T, E> {
         return this;
-    }
-    flatten<T2 = never, E2 = never>(): FlattenOk<T, T2, E2> {
-        return Result.isResult(this.value)
-            ? (this.value as FlattenOk<T, T2, E2>)
-            : (new OkImpl(this.value) as FlattenOk<T, T2, E2>);
-    }
-    collapse<T2 = never, E2 = never>(): DeepInner<T, T2, E2>;
-    collapse<D extends number, T2 = never, E2 = never>(depth: D): DeepInnerN<OkImpl<T>, D, T2, E2>;
-    collapse(depth: number = Infinity): any {
-        if (depth <= 0) return this;
-        let result: Result<any, any> = this.flatten();
-        let remaining = depth - 1;
-        while (remaining > 0 && result.isOk() && Result.isResult(result.unwrap())) {
-            result = result.flatten();
-            remaining--;
-        }
-        return result;
-    }
-
-    transpose<_T2 = never, E2 = never>(): TransposeOkReturnType<T, E2> {
-        if (!Option.isOption(this.value)) {
-            // if the contained value wasnt option
-            return Some(Ok(this.value)) as TransposeOkReturnType<T, E2>;
-        }
-        const opt = this.value;
-        if (opt.isNone()) {
-            return None as TransposeOkReturnType<T, E2>;
-        }
-        return Some(Ok(opt.unwrap())) as TransposeOkReturnType<T, E2>;
     }
 }
 
-export type Ok<T> = OkImpl<T>;
+export type Ok<T, E = never> = Result<T, E>;
 
-export function Ok<T>(val: T): OkImpl<T> {
+export function Ok<T, E = never>(val: T): Result<T, E> {
     return new OkImpl(val);
 }
 
-export type Result<T, E> = OkImpl<T> | ErrImpl<E>;
+export type Result<T, E> = OkImpl<T, E> | ErrImpl<E, T>;
 
 /**
  * Extracts the Ok value type from a Result
  */
-export type ResultOkType<T extends Result<any, any>> = T extends OkImpl<infer U> ? U : never;
+export type ResultOkType<T extends Result<any, any>> = T extends OkImpl<infer U, infer _E> ? U : never;
 
 /**
  * Extracts the Err value type from a Result
  */
-export type ResultErrType<T> = T extends ErrImpl<infer U> ? U : never;
+export type ResultErrType<T> = T extends ErrImpl<infer E, infer _T> ? E : never;
 
 /**
  * Extracts all Ok types from an array of Results
@@ -1057,7 +1013,7 @@ export namespace Result {
                 if (result.isOk()) {
                     okResult.push(result.value);
                 } else {
-                    return result as ErrImpl<any>;
+                    return result as ErrImpl<any, any>;
                 }
             }
             return Ok(okResult);
@@ -1108,7 +1064,7 @@ export namespace Result {
         // short-circuits
         for (const result of results) {
             if (result.isOk()) {
-                return result as OkImpl<ResultOkTypes<T>[number]>;
+                return result as OkImpl<ResultOkTypes<T>[number], any>;
             } else {
                 errResult.push(result.error);
             }
@@ -1131,9 +1087,9 @@ export namespace Result {
      */
     export function wrap<T, E = unknown>(op: () => T): Result<T, E> {
         try {
-            return Ok(op());
+            return Ok<T, E>(op());
         } catch (e) {
-            return Err<E>(e as E);
+            return Err<E, T>(e as E);
         }
     }
 
