@@ -18,14 +18,6 @@ type TransposeResult<T, E> =
 //========================= flatten related types.
 
 /**
- * if `V` is never then return Res otherwise Fallback
- * - used to clean unneeded `never` branches preventing them from stacking and auto collapse to unknown
- * - this trick is used to solve typing problem, over time when calling multiple `flatten` chain, it fallbacks to `any` becomes impossible to infer the type correctly.
- * @example
- *
- */
-type Clean<V, Res, Fallback> = IsNever<V> extends true ? Res : Fallback;
-/**
  * checks if a given value is never.
  */
 type IsNever<V> = [V] extends [never] ? true : false;
@@ -64,15 +56,6 @@ type DeepFlattenN<T, E, D extends number, Acc extends unknown[] = []> =
 
 type IsNonPositive<D extends number> = `${D}` extends `-${string}` ? true : D extends 0 ? true : false;
 type CollapseResultN<T, E, D extends number> = IsNonPositive<D> extends true ? Result<T, E> : DeepFlattenN<T, E, D>;
-
-//================ mapping helpers
-
-// type MapperOk<T, E = never> = Clean<E, OkImpl<T>, Result<T, E>>;
-// type MapperErr<E, T = never> = Clean<T, ErrImpl<E>, Result<T, E>>;
-//======================= andThen, and, orElse, or
-/**
- * Used in `OkImpl.and` | `ErrImpl.or`  and `OkImpl.andThen` | `ErrImpl.orElse` to correctly infer the types returned.
- */
 
 //=======================================================
 abstract class BaseResult<T, E> implements Iterable<T> {
