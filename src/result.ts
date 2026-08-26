@@ -695,7 +695,7 @@ export class ErrImpl<E, T> extends BaseResult<T, E> {
     toAsyncResult(): AsyncResult<T, E> {
         return new AsyncResult(this);
     }
-    inspect(_f?: (v: never) => void): Result<T, E> {
+    inspect(_f?: (v: T) => void): Result<T, E> {
         return this;
     }
     inspectErr(f: (v: E) => void): Result<T, E> {
@@ -813,7 +813,7 @@ export class OkImpl<T, E> extends BaseResult<T, E> {
         f(this.value);
         return this;
     }
-    inspectErr(_f?: (v: never) => void): Result<T, E> {
+    inspectErr(_f?: (v: E) => void): Result<T, E> {
         return this;
     }
 }
