@@ -647,10 +647,7 @@ export class ErrImpl<E, T> extends BaseResult<T, E> {
         return this.error;
     }
     expect(msg: string): never {
-        // The cause casting required because of the current TS definition being overly restrictive
-        // (the definition says it has to be an Error while it can be anything).
-        // See https://github.com/microsoft/TypeScript/issues/45167
-        throw new Error(`${msg} - Error: ${toString(this.error)}`, { cause: this.error as any });
+        throw new Error(msg);
     }
 
     expectErr(_msg?: string): E {
@@ -761,10 +758,7 @@ export class OkImpl<T, E> extends BaseResult<T, E> {
     }
 
     unwrapErr(): E {
-        // The cause casting required because of the current TS definition being overly restrictive
-        // (the definition says it has to be an Error while it can be anything).
-        // See https://github.com/microsoft/TypeScript/issues/45167
-        throw new Error(`Tried to unwrap Ok: ${toString(this.value)}`, { cause: this.value as any });
+        throw this.value;
     }
     expect(_msg?: string): T {
         return this.value;
