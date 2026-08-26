@@ -657,8 +657,8 @@ export class ErrImpl<E, T> extends BaseResult<T, E> {
     andThen<U>(_mapper?: (val: T) => Result<U, E>): Result<T, E> {
         return this;
     }
-    and<U>(_res?: Result<U, E>): Result<Clean<T, U, T>, E> {
-        return this as Result<Clean<T, U, T>, E>;
+    and<U>(_res?: Result<U, E>): Result<U, E> {
+        return this as unknown as Result<U, E>;
     }
     map<U>(_mapper?: (v: T) => U): Result<U, E> {
         return this as unknown as Result<U, E>;
@@ -785,8 +785,8 @@ export class OkImpl<T, E> extends BaseResult<T, E> {
     andThen<U>(mapper: (val: T) => Result<U, E>): Result<U, E> {
         return mapper(this.value);
     }
-    and<U>(res: Result<U, E>): Result<Clean<U, T, U>, E> {
-        return res as Result<Clean<U, T, U>, E>;
+    and<U>(res: Result<U, E>): Result<U, E> {
+        return res;
     }
 
     or<F>(_other?: Result<T, F>): Result<T, E> {
