@@ -682,7 +682,9 @@ export class ErrImpl<E, T> extends BaseResult<T, E> {
         return this;
     }
     inspectErr(f: (v: E) => void): Result<T, E> {
-        f(this.error);
+        if (typeof f === 'function') {
+            f(this.error);
+        }
         return this;
     }
 }
@@ -793,7 +795,10 @@ export class OkImpl<T, E> extends BaseResult<T, E> {
         return new AsyncResult(this);
     }
     inspect(f: (v: T) => void): Result<T, E> {
-        f(this.value);
+        if (typeof f === 'function') {
+            f(this.value);
+        }
+
         return this;
     }
     inspectErr(_f?: (v: E) => void): Result<T, E> {
