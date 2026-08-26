@@ -1,42 +1,48 @@
 import { AsyncOption } from './asyncoption.js';
 import { toString } from './utils.js';
-import { Result, Ok, Err, ErrImpl, OkImpl } from './result.js';
-
+import { Result, Ok, Err } from './result.js';
+//===============================
+type IsNever<T> = [T] extends [never] ? true : false;
 //=========== used on transpose.
-
-type TransposeSomeResult<T> = [T] extends [OkImpl<infer InnerT>]
-    ? OkImpl<SomeImpl<InnerT>>
-    : [T] extends [ErrImpl<infer InnerE>]
-      ? ErrImpl<InnerE>
-      : OkImpl<None>;
+type TransposeOption<T> =
+    IsNever<T> extends false
+        ? T extends Result<infer U, infer E>
+            ? Result<Option<U>, E>
+            : Result<Option<T>, never>
+        : Result<Option<T>, never>;
 
 //====== used on flatten and collapse
-type IsNever<T> = [T] extends [never] ? true : false;
-type FlattenOption<T> =
-    IsNever<T> extends true
-        ? None
-        : T extends SomeImpl<infer U>
-          ? Option<U>
-          : T extends NoneImpl
-            ? NoneImpl
-            : Option<T>;
+
+type DeepFlatten<T> =
+    IsNever<T> extends false
+        ? T extends Option<infer U>
+            ? IsNever<U> extends false
+                ? DeepFlatten<U>
+                : Option<U>
+            : Option<T>
+        : Option<T>;
+type CollapseOption<T> = DeepFlatten<T>;
+//======
+type ReachedDepthCondintion<L extends number, D extends number> = L extends D ? true : false;
+type DeepFlattenN<T, D extends number, Acc extends unknown[] = []> =
+    ReachedDepthCondintion<Acc['length'], D> extends false
+        ? IsNever<T> extends false
+            ? T extends Option<infer U>
+                ? DeepFlattenN<U, D, [...Acc, unknown]>
+                : // if T isnt Option
+                  Option<T>
+            : // if T is never
+              Option<T>
+        : // if the depth was reached
+          Option<T>;
 
 type IsNonPositive<D extends number> = `${D}` extends `-${string}` ? true : D extends 0 ? true : false;
-
-type DeepInner<T> = T extends Option<infer U> ? DeepInner<U> : T;
-type DeepInnerN<T, D extends number, Acc extends unknown[] = []> =
-    IsNonPositive<D> extends true
-        ? T
-        : Acc['length'] extends D
-          ? T
-          : T extends Option<infer U>
-            ? DeepInnerN<U, D, [...Acc, unknown]>
-            : T;
-
-type CollapseDefault<T, D extends number> = IsNever<D> extends true ? DeepInner<T> : DeepInnerN<T, D>;
-interface BaseOption<T> extends Iterable<T> {
+type CollapseOptionN<T, D extends number> = IsNonPositive<D> extends true ? Option<T> : DeepFlattenN<T, D>;
+//=================================================
+abstract class BaseOption<T> implements Iterable<T> {
+    abstract [Symbol.iterator](): any;
     /** `true` when the Option is Some */
-    isSome(): this is SomeImpl<T>;
+    abstract isSome(): this is SomeImpl<T>;
     /**
      * @returns `true` if the `option` is a `Some` and the value inside of it matches a `predicate`.
      * @example
@@ -48,9 +54,9 @@ interface BaseOption<T> extends Iterable<T> {
      * none.isSomeAnd(); // false
      * none.isSomeAnd(() => true); //false
      */
-    isSomeAnd(f: (v: T) => boolean): boolean;
+    abstract isSomeAnd(f: (v: T) => boolean): boolean;
     /** `true` when the Option is None */
-    isNone(): this is None;
+    abstract isNone(): boolean;
     /**
      * @returns `true` if the `option` is a `None` or the value inside of it matches a `predicate`.
      * @example
@@ -63,7 +69,7 @@ interface BaseOption<T> extends Iterable<T> {
      * none.isNoneOr(() => false); // true
      *
      */
-    isNoneOr(f: (v: T) => boolean): boolean;
+    abstract isNoneOr(f: (v: T) => boolean): boolean;
     /**
      * Returns the contained `Some` value, if exists.  Throws an error if not.
      *
@@ -74,7 +80,7 @@ interface BaseOption<T> extends Iterable<T> {
      *
      * @param msg the message to throw if no Some value.
      */
-    expect(msg: string): T;
+    abstract expect(msg: string): any;
 
     /**
      * Returns the contained `Some` value.
@@ -88,14 +94,14 @@ interface BaseOption<T> extends Iterable<T> {
      *
      * Throws if the value is `None`.
      */
-    unwrap(): T;
+    abstract unwrap(): T;
 
     /**
      * Returns the contained `Some` value or a provided default.
      *
      *  (This is the `unwrap_or` in rust)
      */
-    unwrapOr<T2>(val: T2): T | T2;
+    abstract unwrapOr(val: T): any;
 
     /**
      * Returns the contained `Some` value or computes a value with a provided function.
@@ -111,25 +117,25 @@ interface BaseOption<T> extends Iterable<T> {
      * None.unwrapOrElse(() => 'UGH') // => 'UGH'
      * ```
      */
-    unwrapOrElse<T2>(f: () => T2): T | T2;
+    abstract unwrapOrElse(f: () => T): any;
 
     /**
      * Calls `mapper` if the Option is `Some`, otherwise returns `None`.
      * This function can be used for control flow based on `Option` values.
      */
-    andThen<T2>(mapper: (val: T) => Option<T2>): Option<T2>;
+    abstract andThen<T2>(mapper: (val: T) => Option<T2>): Option<T2>;
     /**
      * @returns `None` if the Option is `None`.
      * @returns `optb` if the Option is `Some`.
      */
-    and<U>(optb: Option<U>): Option<U>;
+    abstract and<U>(optb: Option<U>): Option<U>;
     /**
      * Maps an `Option<T>` to `Option<U>` by applying a function to a contained `Some` value,
      * leaving a `None` value untouched.
      *
      * This function can be used to compose the Options of two functions.
      */
-    map<U>(mapper: (val: T) => U): Option<U>;
+    abstract map<U>(mapper: (val: T) => U): Option<U>;
 
     /**
      * Maps an `Option<T>` to `Option<U>` by either converting `T` to `U` using `mapper` (in case
@@ -138,13 +144,13 @@ interface BaseOption<T> extends Iterable<T> {
      * If `default` is a result of a function call consider using `mapOrElse()` instead, it will
      * only evaluate the function when needed.
      */
-    mapOr<U>(default_: U, mapper: (val: T) => U): U;
+    abstract mapOr<U>(default_: U, mapper: (val: T) => U): U;
 
     /**
      * Maps an `Option<T>` to `Option<U>` by either converting `T` to `U` using `mapper` (in case
      * of `Some`) or producing a default value using the `default` function (in case of `None`).
      */
-    mapOrElse<U>(default_: () => U, mapper: (val: T) => U): U;
+    abstract mapOrElse<U>(default_: () => U, mapper: (val: T) => U): U;
 
     /**
      * Returns `Some()` if we have a value, otherwise returns `other`.
@@ -157,7 +163,7 @@ interface BaseOption<T> extends Iterable<T> {
      * Some(1).or(Some(2)) // => Some(1)
      * None.or(Some(2)) // => Some(2)
      */
-    or(other: Option<T>): Option<T>;
+    abstract or(other: Option<T>): Option<T>;
 
     /**
      * Returns `Some()` if we have a value, otherwise returns the result
@@ -170,7 +176,7 @@ interface BaseOption<T> extends Iterable<T> {
      * Some(1).orElse(() => Some(2)) // => Some(1)
      * None.orElse(() => Some(2)) // => Some(2)
      */
-    orElse(other: () => Option<T>): Option<T>;
+    abstract orElse(other: () => Option<T>): Option<T>;
     /**
      *
      * @returns `None` if the option is `None`.
@@ -186,7 +192,7 @@ interface BaseOption<T> extends Iterable<T> {
      * const someFilter2 = Some(4).filter(isEven) // evaluates to `Some(4)` because Option is Some and filter calculates to `true`.
      * ```
      */
-    filter(f: (v: T) => boolean): Option<T>;
+    abstract filter(f: (v: T) => boolean): any;
 
     /**
      * Converts from `Option<Option<T>>` to `Option<T>`.
@@ -202,7 +208,9 @@ interface BaseOption<T> extends Iterable<T> {
      * const some2 = Some(Some(Some(4))); // evaluates to Some(Some(4)).
      * ```
      */
-    flatten(): FlattenOption<T>;
+    flatten(): CollapseOptionN<T, 1> {
+        return this.collapse(1);
+    }
     /**
      * Recursively flattens nested `Option` types to a specified depth or completely.
      *
@@ -256,7 +264,18 @@ interface BaseOption<T> extends Iterable<T> {
      * @see flatten - Removes only one layer of nesting
      * @see andThen - For chaining operations that return Options
      */
-    collapse<D extends number = never, U = CollapseDefault<T, D>>(depth: D): Option<U>;
+    collapse(): CollapseOption<T>;
+    collapse<D extends number>(depth: D): CollapseOptionN<T, D>;
+    collapse(depth: number = Infinity): any {
+        if (depth <= 0 || !this.isSome() || !Option.isOption(this.unwrap())) return this;
+        let result = this as any;
+        let remaining = depth;
+        while (remaining > 0 && result.isSome() && Option.isOption(result.unwrap())) {
+            result = result.unwrap();
+            remaining--;
+        }
+        return result;
+    }
 
     /**
      * Transforms the `Option<T>` into a `Result<T, E>`, mapping `Some(v)` to `Ok(v)` and `None` to `Err(err)`.
@@ -264,7 +283,7 @@ interface BaseOption<T> extends Iterable<T> {
      * Some(4).okOr('err'); // evaluates to Ok(4).
      * None.okOr('your error'); // evaluates to Err('your error').
      */
-    okOr<E>(err: E): Result<T, E>;
+    abstract okOr<E>(err: E): Result<T, E>;
     /**
      * Transforms the `Option<T>` into a `Result<T, E>`, mapping `Some(v)` to `Ok(v)` and `None` to `Err(err())`.
      * @example
@@ -275,7 +294,7 @@ interface BaseOption<T> extends Iterable<T> {
      * const none = None.okOrElse(errFun); // evaluates to Err('err')
      *
      */
-    okOrElse<E>(err: () => E): Result<T, E>;
+    abstract okOrElse<E>(err: () => E): Result<T, E>;
     /**
      * Returns `Some` if exactly one of `self` or `other` is `Some`, otherwise returns `None`.
      *
@@ -304,7 +323,7 @@ interface BaseOption<T> extends Iterable<T> {
      * @see {@link and} - Returns None if self is None, otherwise returns other
      * @see {@link or} - Returns self if Some, otherwise returns other
      */
-    xor<U = T>(other: Option<U | T>): Option<U | T>;
+    abstract xor(other: Option<T>): Option<T>;
     /**
      * Transposes an `Option` of a `Result` into a `Result` of an `Option`.
      *
@@ -352,29 +371,42 @@ interface BaseOption<T> extends Iterable<T> {
      *
      * @see {@link Result.transpose} - Inverse operation (Result<Option<T>, E> → Option<Result<T, E>>)
      */
-    transpose(): any;
+    transpose(): TransposeOption<T>;
+    transpose(): any {
+        if (this.isSome()) {
+            const someValue = this.unwrap() as T;
+            if (Result.isResult(someValue)) {
+                if (someValue.isOk()) {
+                    return Ok(Some(someValue.value));
+                }
+                return someValue;
+            }
+            return Ok(Some(someValue));
+        }
+        return this;
+    }
     /**
      * Creates an `AsyncOption` based on this `Option`.
      *
      * Useful when you need to compose results with asynchronous code.
      */
-    toAsyncOption(): AsyncOption<T>;
+    abstract toAsyncOption(): any;
 }
 
 /**
  * Contains the None value
  */
-class NoneImpl implements BaseOption<never> {
+export class NoneImpl<T> extends BaseOption<T> {
     isSome(): this is SomeImpl<never> {
         return false;
     }
-    isSomeAnd(_f?: (v: never) => boolean): boolean {
-        return false;
-    }
-    isNone(): this is NoneImpl {
+    isNone(): this is NoneImpl<T> {
         return true;
     }
-    isNoneOr(_f?: (v: never) => boolean): boolean {
+    isSomeAnd(_f?: (v: T) => boolean): boolean {
+        return false;
+    }
+    isNoneOr(_f?: (v: T) => boolean): boolean {
         return true;
     }
     [Symbol.iterator](): Iterator<never, never, any> {
@@ -385,15 +417,15 @@ class NoneImpl implements BaseOption<never> {
         };
     }
 
-    unwrapOr<T2>(val: T2): T2 {
+    unwrapOr(val: T): T {
         return val;
     }
 
-    unwrapOrElse<T2>(f: () => T2): T2 {
+    unwrapOrElse(f: () => T): T {
         return f();
     }
 
-    expect(msg: string): never {
+    expect(msg: string): T {
         throw new Error(`${msg}`);
     }
 
@@ -401,72 +433,65 @@ class NoneImpl implements BaseOption<never> {
         throw new Error(`Tried to unwrap None`);
     }
 
-    map<T2>(_mapper?: unknown): None {
-        return this;
+    map<U>(_mapper?: (val: T) => U): Option<U> {
+        return None();
     }
 
-    mapOr<T2>(default_: T2, _mapper?: unknown): T2 {
+    mapOr<U>(default_: U, _mapper?: (val: T) => U): U {
         return default_;
     }
 
-    mapOrElse<U>(default_: () => U, _mapper?: unknown): U {
+    mapOrElse<U>(default_: () => U, _mapper?: (val: T) => U): U {
         return default_();
     }
 
-    or<T>(other: Option<T>): Option<T> {
+    or(other: Option<T>): Option<T> {
         return other;
     }
 
-    orElse<T>(other: () => Option<T>): Option<T> {
+    orElse(other: () => Option<T>): Option<T> {
         return other();
     }
 
-    andThen<T2>(_mapper?: unknown): None {
-        return this;
+    andThen<U>(_mapper?: (val: T) => Option<U>): Option<U> {
+        return None();
     }
     and<U>(_optb?: Option<U>): Option<U> {
-        return None;
+        return None();
     }
-    filter(_f?: (v: never) => boolean): None {
-        return None;
+    filter(_f?: (v: T) => boolean): Option<T> {
+        return None();
     }
-    flatten(): NoneImpl {
-        return this;
-    }
-    collapse<D extends number = never, U = CollapseDefault<never, D>>(_depth?: D): Option<U> {
-        return this;
-    }
-    okOr<E>(error: E): ErrImpl<E> {
+
+    okOr<E>(error: E): Result<T, E> {
         return Err(error);
     }
-    okOrElse<E>(err: () => E): Result<never, E> {
+    okOrElse<E>(err: () => E): Result<T, E> {
         return Err(err());
     }
-    xor<U = never>(other: Option<U>): Option<U> {
+    xor(other: Option<T>): Option<T> {
         return other;
     }
 
-    transpose(): OkImpl<None> {
-        return Ok(None) as OkImpl<None>;
-    }
     toString(): string {
         return 'None';
     }
 
-    toAsyncOption(): AsyncOption<never> {
-        return new AsyncOption<never>(None);
+    toAsyncOption(): AsyncOption<T> {
+        return new AsyncOption<T>(None<T>());
     }
 }
 
 // Export None as a singleton, then freeze it so it can't be modified
-export const None = new NoneImpl();
-export type None = NoneImpl;
-Object.freeze(None);
+export type None<T = never> = Option<T>;
 
+export function None<T = never>(): Option<T> {
+    return new NoneImpl<T>();
+}
 /**
  * Contains the success value
  */
-export class SomeImpl<T> implements BaseOption<T> {
+export class SomeImpl<T> extends BaseOption<T> {
     /**
      * An empty Some
      *
@@ -483,6 +508,7 @@ export class SomeImpl<T> implements BaseOption<T> {
     }
 
     constructor(val: T) {
+        super();
         this.value = val;
     }
 
@@ -492,18 +518,18 @@ export class SomeImpl<T> implements BaseOption<T> {
     isSomeAnd(f: (v: T) => boolean): boolean {
         return f(this.value);
     }
-    isNone(): this is NoneImpl {
+    isNone(): this is NoneImpl<T> {
         return false;
     }
     isNoneOr(f: (v: T) => boolean): boolean {
         return f(this.value);
     }
 
-    unwrapOr(_val?: unknown): T {
+    unwrapOr(_val?: T): T {
         return this.value;
     }
 
-    unwrapOrElse(_f?: unknown): T {
+    unwrapOrElse(_f?: () => T): T {
         return this.value;
     }
 
@@ -514,11 +540,11 @@ export class SomeImpl<T> implements BaseOption<T> {
         return this.value;
     }
 
-    map<T2>(mapper: (val: T) => T2): SomeImpl<T2> {
+    map<U>(mapper: (val: T) => U): Option<U> {
         return Some(mapper(this.value));
     }
 
-    mapOr<T2>(_default_: T2, mapper: (val: T) => T2): T2 {
+    mapOr<U>(_default_: U, mapper: (val: T) => U): U {
         return mapper(this.value);
     }
 
@@ -534,53 +560,27 @@ export class SomeImpl<T> implements BaseOption<T> {
         return this;
     }
 
-    andThen<T2>(mapper: (val: T) => Option<T2>): Option<T2> {
+    andThen<U>(mapper: (val: T) => Option<U>): Option<U> {
         return mapper(this.value);
     }
     and<U>(optb: Option<U>): Option<U> {
         return optb;
     }
     filter(f: (v: T) => boolean): Option<T> {
-        return f(this.value) ? this : None;
-    }
-    flatten(): FlattenOption<T> {
-        if (Option.isOption(this.value)) {
-            return this.value as FlattenOption<T>;
-        }
-        return this as unknown as FlattenOption<T>;
+        return f(this.value) ? this : None();
     }
 
-    collapse<D extends number = never, U = CollapseDefault<T, D>>(depth?: D): Option<U> {
-        if (depth !== undefined && depth <= 0) return this as unknown as Option<U>;
-        let result = this.flatten() as Option<unknown>;
-        let remaining = (depth ?? Infinity) - 1;
-        while (remaining > 0 && result.isSome() && Option.isOption(result.unwrap())) {
-            result = result.flatten();
-            remaining--;
-        }
-
-        return result as Option<U>;
-    }
-    okOr<E>(_error?: E): OkImpl<T> {
+    okOr<E>(_error?: E): Result<T, E> {
         return Ok(this.value);
     }
     okOrElse<E>(_err?: () => E): Result<T, E> {
         return Ok(this.value);
     }
     xor(other: Option<T>): Option<T> {
-        return other.isNone() ? this : None;
-    }
-    transpose(): TransposeSomeResult<T> {
-        if (!Result.isResult(this.value)) {
-            return Ok(Some(this.value)) as TransposeSomeResult<T>;
-        }
-        if (this.value.isErr()) {
-            return this.value as TransposeSomeResult<T>;
-        }
-        return Ok(Some(this.value.value)) as TransposeSomeResult<T>;
+        return other.isNone() ? this : None();
     }
     toAsyncOption(): AsyncOption<T> {
-        return new AsyncOption(this);
+        return new AsyncOption<T>(this);
     }
 
     toString(): string {
@@ -588,11 +588,11 @@ export class SomeImpl<T> implements BaseOption<T> {
     }
 }
 
-export type Some<T> = SomeImpl<T>;
-export function Some<T>(val: T): SomeImpl<T> {
+export type Some<T> = Option<T>;
+export function Some<T>(val: T): Option<T> {
     return new SomeImpl(val);
 }
-export type Option<T> = SomeImpl<T> | None;
+export type Option<T> = SomeImpl<T> | NoneImpl<T>;
 
 export type OptionSomeType<T extends Option<any>> = T extends SomeImpl<infer U> ? U : never;
 
@@ -680,7 +680,7 @@ export namespace Option {
         }
 
         // it must be None
-        return None;
+        return None();
     }
 
     export function isOption<T = any>(value: unknown): value is Option<T> {
@@ -743,6 +743,6 @@ export namespace Option {
      * ```
      */
     export function fromNullish<T>(value: T): Option<NonNullable<T>> {
-        return value === null || value === undefined ? None : Some(value);
+        return value === null || value === undefined ? None() : Some(value);
     }
 }
