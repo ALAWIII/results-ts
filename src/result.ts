@@ -637,8 +637,8 @@ export class ErrImpl<E, T> extends BaseResult<T, E> {
         return this.error;
     }
 
-    andThen<U>(_mapper?: (val: T) => Result<U, E>): Result<T, E> {
-        return this;
+    andThen<U>(_mapper?: (val: T) => Result<U, E>): Result<U, E> {
+        return this as unknown as Result<U, E>;
     }
     and<U>(_res?: Result<U, E>): Result<U, E> {
         return this as unknown as Result<U, E>;
