@@ -684,7 +684,7 @@ export namespace Option {
     }
 
     export function isOption<T = any>(value: unknown): value is Option<T> {
-        return value instanceof SomeImpl || value === None;
+        return value instanceof SomeImpl || value instanceof NoneImpl;
     }
 
     /**
@@ -703,7 +703,7 @@ export namespace Option {
      * ```
      */
     export function fromNullable<T>(value: T): Option<Exclude<T, null>> {
-        return (value === null ? None : Some(value)) as Option<Exclude<T, null>>;
+        return (value === null ? None() : Some(value)) as Option<Exclude<T, null>>;
     }
 
     /**
@@ -722,7 +722,7 @@ export namespace Option {
      * ```
      */
     export function fromOptional<T>(value: T): Option<Exclude<T, undefined>> {
-        return (value === undefined ? None : Some(value)) as Option<Exclude<T, undefined>>;
+        return (value === undefined ? None() : Some(value)) as Option<Exclude<T, undefined>>;
     }
 
     /**
