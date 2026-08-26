@@ -647,7 +647,7 @@ export class ErrImpl<E, T> extends BaseResult<T, E> {
         return this.error;
     }
     expect(msg: string): never {
-        throw new Error(msg);
+        throw new Error(`${msg}: ${this.error}`);
     }
 
     expectErr(_msg?: string): E {
@@ -765,7 +765,7 @@ export class OkImpl<T, E> extends BaseResult<T, E> {
     }
 
     expectErr(msg: string): E {
-        throw new Error(msg);
+        throw new Error(`${msg}: ${this.value}`);
     }
 
     map<U>(mapper: (val: T) => U): Result<U, E> {
