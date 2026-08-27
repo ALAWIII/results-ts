@@ -150,7 +150,7 @@ export function resultSwitchMap<T, E, T2, E2>(
                 if (result.isOk()) {
                     return mapper(result.value);
                 } else {
-                    return of(result);
+                    return of(result as unknown as Result<T2, E | E2>);
                 }
             }),
             map((result: T2 | Result<T2, E | E2>) => {
@@ -221,7 +221,7 @@ export function resultMergeMap<T, E, T2, E2>(
                 if (result.isOk()) {
                     return mapper(result.value);
                 } else {
-                    return of(result);
+                    return of(result as unknown as Result<T2, E | E2>);
                 }
             }),
             map((result: T2 | Result<T2, E | E2>) => {
@@ -260,7 +260,7 @@ export function resultMergeMap<T, E, T2, E2>(
 export function filterResultOk<T, E>(): OperatorFunction<Result<T, E>, T> {
     return (source) => {
         return source.pipe(
-            filter((result): result is OkImpl<T> => result.isOk()),
+            filter((result): result is OkImpl<T, E> => result.isOk()),
             map((result) => result.value),
         );
     };
@@ -291,7 +291,7 @@ export function filterResultOk<T, E>(): OperatorFunction<Result<T, E>, T> {
 export function filterResultErr<T, E>(): OperatorFunction<Result<T, E>, E> {
     return (source) => {
         return source.pipe(
-            filter((result): result is ErrImpl<E> => result.isErr()),
+            filter((result): result is ErrImpl<E, T> => result.isErr()),
             map((result) => result.error),
         );
     };
