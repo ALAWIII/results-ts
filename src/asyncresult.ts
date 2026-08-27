@@ -1,5 +1,5 @@
 import { AsyncOption } from './asyncoption.js';
-import { Err, Result, Ok, ErrImpl } from './result.js';
+import { Err, Result, Ok } from './result.js';
 
 /**
  * An async-aware `Result` counterpart.
@@ -45,15 +45,13 @@ export class AsyncResult<T, E> {
      * await badResult.andThen(async (value) => Ok(value * 2)).promise // Err('boo')
      * ```
      */
-    andThen<T2, E2>(
-        mapper: (val: T) => Result<T2, E2> | Promise<Result<T2, E2>> | AsyncResult<T2, E2>,
-    ): AsyncResult<T2, E | E2> {
+    andThen<U, E>(mapper: (val: T) => Result<U, E> | Promise<Result<U, E>> | AsyncResult<U, E>): AsyncResult<U, E> {
         return this.thenInternal(async (result) => {
             if (result.isErr()) {
                 // SAFETY: What we're returning here is Err<E>. That doesn't sit well with
                 // TypeScript for some reason, let's explicitly expand the type to what this
                 // function is supposed to return.
-                return result as ErrImpl<E | E2>;
+                return result as unknown as Result<U, E>;
             }
             const mapped = mapper(result.value);
             return mapped instanceof AsyncResult ? mapped.promise : mapped;
@@ -78,7 +76,7 @@ export class AsyncResult<T, E> {
     map<U>(mapper: (val: T) => U | Promise<U>): AsyncResult<U, E> {
         return this.thenInternal(async (result) => {
             if (result.isErr()) {
-                return result;
+                return result as unknown as Result<U, E>;
             }
             return Ok(await mapper(result.value));
         });
@@ -100,7 +98,7 @@ export class AsyncResult<T, E> {
     mapErr<F>(mapper: (val: E) => F | Promise<F>): AsyncResult<T, F> {
         return this.thenInternal(async (result) => {
             if (result.isOk()) {
-                return result;
+                return result as unknown as Result<T, F>;
             }
             return Err(await mapper(result.error));
         });
@@ -138,10 +136,10 @@ export class AsyncResult<T, E> {
      * await goodResult.orElse(() => Ok(123)).promise // Ok(1)
      * ```
      */
-    orElse<E2>(other: (error: E) => Result<T, E2> | AsyncResult<T, E2> | Promise<Result<T, E2>>): AsyncResult<T, E2> {
+    orElse<F>(other: (error: E) => Result<T, F> | AsyncResult<T, F> | Promise<Result<T, F>>): AsyncResult<T, F> {
         return this.thenInternal(async (result) => {
             if (result.isOk()) {
-                return result;
+                return result as unknown as Result<T, F>;
             }
             const otherValue = other(result.error);
             return otherValue instanceof AsyncResult ? otherValue.promise : otherValue;
