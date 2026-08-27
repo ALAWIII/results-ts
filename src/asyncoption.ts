@@ -30,7 +30,32 @@ export class AsyncOption<T> {
     constructor(start: Option<T> | Promise<Option<T>>) {
         this.promise = Promise.resolve(start);
     }
-
+    /**
+     * Returns `other` if this `AsyncOption` is `Some`, otherwise returns `None`.
+     *
+     * This is the eager counterpart of `andThen`: it does not take a function,
+     * just another `Option`-like value to use when the current option is `Some`.
+     *
+     * - `Some(a).and(other)` → `other`
+     * - `None.and(other)` → `None`
+     *
+     * @example
+     * ```typescript
+     * const some = Some(1).toAsyncOption();
+     * const none = None.toAsyncOption();
+     *
+     * await some.and(Some('ok'));        // Some('ok')
+     * await some.and(None);              // None
+     * await none.and(Some('ok'));        // None
+     *
+     * // Works with AsyncOption and Promise<Option>
+     * await some.and(new AsyncOption(Some(42)));   // Some(42)
+     * await some.and(Promise.resolve(Some('hi'))); // Some('hi')
+     * ```
+     */
+    and<U>(other: Option<U> | AsyncOption<U> | Promise<Option<U>>): AsyncOption<U> {
+        return this.andThen(() => other);
+    }
     /**
      * Calls `mapper` if the option is `Some`, otherwise keeps the `None` value intact.
      * This function can be used for control flow based on `Option` values.
