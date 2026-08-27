@@ -6,14 +6,14 @@ test('the constructor should work', async () => {
 });
 
 test('andThen() should work', async () => {
-    const noValue = new AsyncOption(None);
+    const noValue = new AsyncOption(None());
     const hasValue = new AsyncOption(Some(1));
 
     expect(
         await noValue.andThen(() => {
             throw new Error('Should not be called');
         }).promise,
-    ).toEqual(None);
+    ).toEqual(None());
 
     expect(await hasValue.andThen((value) => Some(value * 3)).promise).toEqual(Some(3));
     expect(await hasValue.andThen(async (value) => Some(value * 3)).promise).toEqual(Some(3));
@@ -21,20 +21,20 @@ test('andThen() should work', async () => {
 });
 
 test('map() should work', async () => {
-    const noValue = new AsyncOption(None);
+    const noValue = new AsyncOption(None());
     const hasValue = new AsyncOption(Some(1));
 
     expect(
         await noValue.map(() => {
             throw new Error('Should not be called');
         }).promise,
-    ).toEqual(None);
+    ).toEqual(None());
     expect(await hasValue.map((value) => value * 2).promise).toEqual(Some(2));
     expect(await hasValue.map(async (value) => value * 2).promise).toEqual(Some(2));
 });
 
 test('or() should work', async () => {
-    const noValue = new AsyncOption(None);
+    const noValue = new AsyncOption(None());
     const hasValue = new AsyncOption(Some(1));
 
     expect(await noValue.or(Some(200)).promise).toEqual(Some(200));
@@ -48,7 +48,7 @@ test('or() should work', async () => {
 });
 
 test('orElse() should work', async () => {
-    const noValue = new AsyncOption(None);
+    const noValue = new AsyncOption(None());
     const hasValue = new AsyncOption(Some(1));
 
     function notExpectedToBeCalled(): never {
@@ -62,18 +62,18 @@ test('orElse() should work', async () => {
 });
 
 test('toResult() should work', async () => {
-    const result = new AsyncOption(None);
+    const result = new AsyncOption(None());
     expect((await result.toResult('Blah').promise).unwrapErr()).toEqual('Blah');
 });
 
 test('AsyncOption should be awaitable', async () => {
     const hasValue = new AsyncOption(Some(42));
-    const noValue = new AsyncOption(None);
+    const noValue = new AsyncOption(None());
 
     // Should be able to await AsyncOption directly
     const result1 = await hasValue;
     expect(result1).toEqual(Some(42));
 
     const result2 = await noValue;
-    expect(result2).toEqual(None);
+    expect(result2).toEqual(None());
 });
