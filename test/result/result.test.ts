@@ -9,8 +9,8 @@ import {
     ResultOkType,
     ResultOkTypes,
     ResultOkTypesRecord,
-} from '../src/index.js';
-import { eq } from './util.js';
+} from '../../src/index.js';
+import { eq } from '../util.js';
 
 test('Iterable', () => {
     const r1 = Ok([true, false]) as Result<boolean[], number>;
