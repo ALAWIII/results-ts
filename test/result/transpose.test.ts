@@ -1,5 +1,5 @@
-import { Err, None, Ok, Option, Result, Some } from '../../../src';
-import { eq } from '../../util';
+import { Err, None, Ok, Option, Result, Some } from '../../src';
+import { eq } from '../util';
 
 describe('Ok.transpose', () => {
     test('should success transpose Ok(Some(number)) -> Some(Ok(number))', () => {
