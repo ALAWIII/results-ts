@@ -1,4 +1,4 @@
-import { AsyncResult, Err, Ok, Some } from '../src/index.js';
+import { AsyncResult, Err, Ok, Some } from '../../src/index.js';
 
 test('and() should work', async () => {
     const err = Err('error');
