@@ -1,5 +1,25 @@
 import { AsyncResult, Err, Ok, Some } from '../src/index.js';
 
+test('and() should work', async () => {
+    const err = Err('error');
+    const badResult = new AsyncResult(err);
+    const goodResult = new AsyncResult(Ok<number, string>(100));
+
+    // Err.and ignores the argument and keeps the original Err
+    expect(await badResult.and(Ok(999)).promise).toEqual(err);
+    expect(await badResult.and(Promise.resolve(Ok(999))).promise).toEqual(err);
+    expect(await badResult.and(Ok(999).toAsyncResult()).promise).toEqual(err);
+
+    // Ok.and returns the provided result (sync, async, or AsyncResult)
+    expect(await goodResult.and(Ok(200)).promise).toEqual(Ok(200));
+    expect(await goodResult.and(Promise.resolve(Ok(300))).promise).toEqual(Ok(300));
+    expect(await goodResult.and(Ok(400).toAsyncResult()).promise).toEqual(Ok(400));
+
+    // Ok.and with Err short-circuits to that Err
+    expect(await goodResult.and(Err('new error')).promise).toEqual(Err('new error'));
+    expect(await goodResult.and(Promise.resolve(Err('async error'))).promise).toEqual(Err('async error'));
+    expect(await goodResult.and(Err('asyncresult error').toAsyncResult()).promise).toEqual(Err('asyncresult error'));
+});
 test('andThen() should work', async () => {
     const err = Err('error');
     const badResult = new AsyncResult(err);
