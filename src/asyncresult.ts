@@ -30,7 +30,25 @@ export class AsyncResult<T, E> {
     constructor(start: Result<T, E> | Promise<Result<T, E>>) {
         this.promise = Promise.resolve(start);
     }
-
+    /**
+     * Returns `res` if this `AsyncResult` is `Ok`, otherwise returns the original `Err` value.
+     *
+     * This is the async-aware version of `Result.and`. Use it when you want to short-circuit
+     * on `Err` and replace the `Ok` value with another result (sync or async).
+     *
+     * @example
+     * ```typescript
+     * const goodResult = Ok(1).toAsyncResult();
+     * const badResult = Err('boo').toAsyncResult();
+     *
+     * await goodResult.and(Ok(2)).promise;           // Ok(2)
+     * await goodResult.and(Promise.resolve(Ok(3))).promise; // Ok(3)
+     * await badResult.and(Ok(999)).promise;          // Err('boo')
+     * ```
+     */
+    and<U>(res: Result<U, E> | AsyncResult<U, E> | Promise<Result<U, E>>): AsyncResult<U, E> {
+        return this.andThen(() => res);
+    }
     /**
      * Calls `mapper` if the result is `Ok`, otherwise keeps the `Err` value intact.
      * This function can be used for control flow based on `Result` values.
@@ -119,7 +137,7 @@ export class AsyncResult<T, E> {
      * await goodResult.or(Ok(123)).promise // Ok(1)
      * ```
      */
-    or<E2>(other: Result<T, E2> | AsyncResult<T, E2> | Promise<Result<T, E2>>): AsyncResult<T, E2> {
+    or<F>(other: Result<T, F> | AsyncResult<T, F> | Promise<Result<T, F>>): AsyncResult<T, F> {
         return this.orElse(() => other);
     }
 
