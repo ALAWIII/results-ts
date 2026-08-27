@@ -1,5 +1,6 @@
 import { AsyncResult } from './asyncresult.js';
 import { None, Option, Some } from './option.js';
+import { Err, Ok } from './result.js';
 
 /**
  * An async-aware `Option` counterpart.
@@ -183,7 +184,36 @@ export class AsyncOption<T> {
     okOr<E>(error: E): AsyncResult<T, E> {
         return new AsyncResult(this.promise.then((option) => option.okOr(error)));
     }
-
+    /**
+     * Converts this `AsyncOption<T>` into an `AsyncResult<T, E>`, mapping:
+     * - `Some(v)` → `Ok(v)`
+     * - `None` → `Err(await error())`
+     *
+     * The `error` factory is called only when the option is `None`.
+     *
+     * @example
+     * ```ts
+     * const some = Some(5).toAsyncOption();
+     * const none = None.toAsyncOption();
+     *
+     * const r1 = await some.okOrElse(() => 'missing'); // Ok(5)
+     * const r2 = await none.okOrElse(() => 'missing'); // Err('missing')
+     *
+     * // Async error factory
+     * const r3 = await none.okOrElse(async () => {
+     *   await delay(10);
+     *   return 'computed error';
+     * }); // Err('computed error')
+     * ```
+     */
+    okOrElse<E>(error: () => E | Promise<E>): AsyncResult<T, E> {
+        return new AsyncResult(
+            this.promise.then(async (option) => {
+                if (option.isSome()) return Ok(option.value);
+                return Err(await error());
+            }),
+        );
+    }
     /**
      * Makes `AsyncOption` awaitable by implementing the thenable interface.
      * This allows you to use `await` directly on `AsyncOption` instances.
