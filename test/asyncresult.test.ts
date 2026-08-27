@@ -95,6 +95,10 @@ test('ok() should work', async () => {
     const result = new AsyncResult(Ok(1));
     expect(await result.ok()).toEqual(Some(1));
 });
+test('err() should work', async () => {
+    const result = new AsyncResult(Err(1));
+    expect(await result.err()).toEqual(Some(1));
+});
 
 test('AsyncResult should be awaitable', async () => {
     const goodResult = new AsyncResult(Ok(42));
