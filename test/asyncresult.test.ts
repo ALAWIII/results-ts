@@ -6,19 +6,19 @@ test('and() should work', async () => {
     const goodResult = new AsyncResult(Ok<number, string>(100));
 
     // Err.and ignores the argument and keeps the original Err
-    expect(await badResult.and(Ok(999)).promise).toEqual(err);
-    expect(await badResult.and(Promise.resolve(Ok(999))).promise).toEqual(err);
-    expect(await badResult.and(Ok(999).toAsyncResult()).promise).toEqual(err);
+    expect(await badResult.and(Ok(999))).toEqual(err);
+    expect(await badResult.and(Promise.resolve(Ok(999)))).toEqual(err);
+    expect(await badResult.and(Ok(999).toAsyncResult())).toEqual(err);
 
     // Ok.and returns the provided result (sync, async, or AsyncResult)
-    expect(await goodResult.and(Ok(200)).promise).toEqual(Ok(200));
-    expect(await goodResult.and(Promise.resolve(Ok(300))).promise).toEqual(Ok(300));
-    expect(await goodResult.and(Ok(400).toAsyncResult()).promise).toEqual(Ok(400));
+    expect(await goodResult.and(Ok(200))).toEqual(Ok(200));
+    expect(await goodResult.and(Promise.resolve(Ok(300)))).toEqual(Ok(300));
+    expect(await goodResult.and(Ok(400).toAsyncResult())).toEqual(Ok(400));
 
     // Ok.and with Err short-circuits to that Err
-    expect(await goodResult.and(Err('new error')).promise).toEqual(Err('new error'));
-    expect(await goodResult.and(Promise.resolve(Err('async error'))).promise).toEqual(Err('async error'));
-    expect(await goodResult.and(Err('asyncresult error').toAsyncResult()).promise).toEqual(Err('asyncresult error'));
+    expect(await goodResult.and(Err('new error'))).toEqual(Err('new error'));
+    expect(await goodResult.and(Promise.resolve(Err('async error')))).toEqual(Err('async error'));
+    expect(await goodResult.and(Err('asyncresult error').toAsyncResult())).toEqual(Err('asyncresult error'));
 });
 test('andThen() should work', async () => {
     const err = Err('error');
@@ -28,10 +28,10 @@ test('andThen() should work', async () => {
     expect(
         await badResult.andThen(() => {
             throw new Error('Should not be called');
-        }).promise,
+        }),
     ).toEqual(err);
-    expect(await goodResult.andThen((value) => Promise.resolve(Ok(value * 2))).promise).toEqual(Ok(200));
-    expect(await goodResult.andThen((value) => Ok(value * 3).toAsyncResult()).promise).toEqual(Ok(300));
+    expect(await goodResult.andThen((value) => Promise.resolve(Ok(value * 2)))).toEqual(Ok(200));
+    expect(await goodResult.andThen((value) => Ok(value * 3).toAsyncResult())).toEqual(Ok(300));
 });
 
 test('map() should work', async () => {
@@ -42,9 +42,9 @@ test('map() should work', async () => {
     expect(
         await badResult.map(() => {
             throw new Error('Should not be called');
-        }).promise,
+        }),
     ).toEqual(err);
-    expect(await goodResult.map((value) => Promise.resolve(value * 2)).promise).toEqual(Ok(200));
+    expect(await goodResult.map((value) => Promise.resolve(value * 2))).toEqual(Ok(200));
 });
 
 test('mapErr() should work', async () => {
@@ -55,11 +55,11 @@ test('mapErr() should work', async () => {
     expect(
         await goodResult.mapErr((_error) => {
             throw new Error('Should not be called');
-        }).promise,
+        }),
     ).toEqual(Ok(100));
 
-    expect((await badResult.mapErr((error) => `Error is ${error}`).promise).unwrapErr()).toEqual('Error is Boo');
-    expect((await badResult.mapErr(async (error) => `Error is ${error}`).promise).unwrapErr()).toEqual('Error is Boo');
+    expect((await badResult.mapErr((error) => `Error is ${error}`)).unwrapErr()).toEqual('Error is Boo');
+    expect((await badResult.mapErr(async (error) => `Error is ${error}`)).unwrapErr()).toEqual('Error is Boo');
 });
 
 test('or() should work', async () => {
@@ -67,14 +67,14 @@ test('or() should work', async () => {
     const badResult = new AsyncResult(err);
     const goodResult = new AsyncResult(Ok(100));
 
-    expect(await badResult.or(Ok(200)).promise).toEqual(Ok(200));
-    expect(await goodResult.or(Ok(200)).promise).toEqual(Ok(100));
+    expect(await badResult.or(Ok(200))).toEqual(Ok(200));
+    expect(await goodResult.or(Ok(200))).toEqual(Ok(100));
 
-    expect(await badResult.or(new AsyncResult(Ok(200))).promise).toEqual(Ok(200));
-    expect(await goodResult.or(new AsyncResult(Ok(200))).promise).toEqual(Ok(100));
+    expect(await badResult.or(new AsyncResult(Ok(200)))).toEqual(Ok(200));
+    expect(await goodResult.or(new AsyncResult(Ok(200)))).toEqual(Ok(100));
 
-    expect(await badResult.or(Promise.resolve(Ok(200))).promise).toEqual(Ok(200));
-    expect(await goodResult.or(Promise.resolve(Ok(200))).promise).toEqual(Ok(100));
+    expect(await badResult.or(Promise.resolve(Ok(200)))).toEqual(Ok(200));
+    expect(await goodResult.or(Promise.resolve(Ok(200)))).toEqual(Ok(100));
 });
 
 test('orElse() should work', async () => {
@@ -85,15 +85,15 @@ test('orElse() should work', async () => {
         throw new Error('Not expected to be called');
     }
 
-    expect(await goodResult.orElse(notExpectedToBeCalled).promise).toEqual(Ok(100));
-    expect(await badResult.orElse(() => Ok(200)).promise).toEqual(Ok(200));
-    expect(await badResult.orElse(() => new AsyncResult(Ok(200))).promise).toEqual(Ok(200));
-    expect(await badResult.orElse(() => Promise.resolve(Ok(200))).promise).toEqual(Ok(200));
+    expect(await goodResult.orElse(notExpectedToBeCalled)).toEqual(Ok(100));
+    expect(await badResult.orElse(() => Ok(200))).toEqual(Ok(200));
+    expect(await badResult.orElse(() => new AsyncResult(Ok(200)))).toEqual(Ok(200));
+    expect(await badResult.orElse(() => Promise.resolve(Ok(200)))).toEqual(Ok(200));
 });
 
 test('ok() should work', async () => {
     const result = new AsyncResult(Ok(1));
-    expect(await result.ok().promise).toEqual(Some(1));
+    expect(await result.ok()).toEqual(Some(1));
 });
 
 test('AsyncResult should be awaitable', async () => {
