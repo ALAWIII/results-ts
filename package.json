@@ -59,6 +59,7 @@
     "Union"
   ],
   "devDependencies": {
+    "@types/node": "^26.4.0",
     "@vitest/coverage-v8": "^4.1.11",
     "conditional-type-checks": "^1.0.5",
     "copyfiles": "^2.4.1",
