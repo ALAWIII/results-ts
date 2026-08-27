@@ -373,7 +373,7 @@ abstract class BaseOption<T> implements Iterable<T> {
      */
     transpose(): TransposeOption<T>;
     transpose(): any {
-        if (this.isNone()) return this;
+        if (this.isNone()) return Ok(this);
         const innerRes = this.unwrap();
         if (!Result.isResult(innerRes)) return Ok(Some(innerRes));
         return innerRes.isOk() ? Ok(Some(innerRes.value)) : innerRes;
