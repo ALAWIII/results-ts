@@ -45,10 +45,10 @@ export class AsyncOption<T> {
      * await noValue.andThen(async (value) => Some(value * 2)).promise // None
      * ```
      */
-    andThen<T2>(mapper: (val: T) => Option<T2> | Promise<Option<T2>> | AsyncOption<T2>): AsyncOption<T2> {
+    andThen<U>(mapper: (val: T) => Option<U> | Promise<Option<U>> | AsyncOption<U>): AsyncOption<U> {
         return this.thenInternal(async (option) => {
             if (option.isNone()) {
-                return option;
+                return option as unknown as Option<U>;
             }
             const mapped = mapper(option.value);
             return mapped instanceof AsyncOption ? mapped.promise : mapped;
@@ -73,7 +73,7 @@ export class AsyncOption<T> {
     map<U>(mapper: (val: T) => U | Promise<U>): AsyncOption<U> {
         return this.thenInternal(async (option) => {
             if (option.isNone()) {
-                return option;
+                return option as unknown as Option<U>;
             }
             return Some(await mapper(option.value));
         });
