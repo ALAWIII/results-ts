@@ -8,9 +8,9 @@ describe('Some.expect', () => {
 });
 describe('None.expect', () => {
     test('should throw error message when call expect on None.', () => {
-        const some = None();
+        const none = None();
         try {
-            some.expect('called on None throws error');
+            none.expect('called on None throws error');
         } catch (e) {
             expect(e).toEqual(new Error('called on None throws error'));
         }
