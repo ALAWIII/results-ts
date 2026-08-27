@@ -1,5 +1,5 @@
-import { None, NoneImpl, Option, OptionSomeType, Some, SomeImpl } from '../src/index.js';
-import { eq } from './util.js';
+import { None, NoneImpl, Option, OptionSomeType, Some, SomeImpl } from '../../src/index.js';
+import { eq } from '../util.js';
 
 const someString = Some('foo');
 const someNum = Some(10);
