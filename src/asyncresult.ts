@@ -31,6 +31,49 @@ export class AsyncResult<T, E> {
         this.promise = Promise.resolve(start);
     }
     /**
+     * Calls `fn` with the `Ok` value if this `AsyncResult` is `Ok`, otherwise returns self unchanged.
+     *
+     * Useful for side effects like logging or debugging without modifying the result.
+     *
+     * @example
+     * ```typescript
+     * const result = Ok(42).toAsyncResult();
+     *
+     * await result.inspect((v) => console.log('Got value:', v)); // logs: Got value: 42
+     * await Err('error').toAsyncResult().inspect((v) => console.log('Got value:', v)); // no log
+     * ```
+     */
+    inspect(fn: (val: T) => void | Promise<void>): AsyncResult<T, E> {
+        return this.thenInternal(async (result) => {
+            if (result.isOk()) {
+                await fn(result.value);
+            }
+            return result;
+        });
+    }
+
+    /**
+     * Calls `fn` with the `Err` value if this `AsyncResult` is `Err`, otherwise returns self unchanged.
+     *
+     * Useful for side effects like logging errors without modifying the result.
+     *
+     * @example
+     * ```typescript
+     * const result = Err('something failed').toAsyncResult();
+     *
+     * await result.inspectErr((e) => console.log('Error:', e)); // logs: Error: something failed
+     * await Ok(42).toAsyncResult().inspectErr((e) => console.log('Error:', e)); // no log
+     * ```
+     */
+    inspectErr(fn: (error: E) => void | Promise<void>): AsyncResult<T, E> {
+        return this.thenInternal(async (result) => {
+            if (result.isErr()) {
+                await fn(result.error);
+            }
+            return result;
+        });
+    }
+    /**
      * Returns `res` if this `AsyncResult` is `Ok`, otherwise returns the original `Err` value.
      *
      * This is the async-aware version of `Result.and`. Use it when you want to short-circuit
