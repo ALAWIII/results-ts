@@ -43,7 +43,7 @@ test('mapErr() should work', async () => {
 });
 
 test('or() should work', async () => {
-    const err = Err('Boo');
+    const err = Err<string, number>('Boo');
     const badResult = new AsyncResult(err);
     const goodResult = new AsyncResult(Ok(100));
 
@@ -58,7 +58,7 @@ test('or() should work', async () => {
 });
 
 test('orElse() should work', async () => {
-    const err = Err('Boo');
+    const err = Err<string, number>('Boo');
     const badResult = new AsyncResult(err);
     const goodResult = new AsyncResult(Ok(100));
     function notExpectedToBeCalled(): never {
