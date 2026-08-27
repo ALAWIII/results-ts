@@ -215,6 +215,43 @@ export class AsyncOption<T> {
         );
     }
     /**
+     * Returns `Some` if exactly one of `self` or `other` is `Some`; otherwise returns `None`.
+     *
+     * This is the exclusive-or (XOR) operation for `AsyncOption`:
+     * - `Some(a).xor(Some(b))` → `None`
+     * - `Some(a).xor(None)` → `Some(a)`
+     * - `None.xor(Some(b))` → `Some(b)`
+     * - `None.xor(None)` → `None`
+     *
+     * Both operands are awaited, so `other` may be an `Option`, `AsyncOption`, or `Promise<Option>`.
+     *
+     * @example
+     * ```ts
+     * const some1 = Some(1).toAsyncOption();
+     * const some2 = Some(2).toAsyncOption();
+     * const none = None.toAsyncOption();
+     *
+     * await some1.xor(some2); // None
+     * await some1.xor(none);  // Some(1)
+     * await none.xor(some2);  // Some(2)
+     * await none.xor(none);   // None
+     *
+     * // Works with AsyncOption and Promise<Option>
+     * await some1.xor(new AsyncOption(Some(3))); // None
+     * await some1.xor(Promise.resolve(None));    // Some(1)
+     * ```
+     */
+    xor(other: Option<T> | AsyncOption<T> | Promise<Option<T>>): AsyncOption<T> {
+        return new AsyncOption(
+            Promise.all([this.promise, other instanceof AsyncOption ? other.promise : Promise.resolve(other)]).then(
+                ([self, otherOption]) => {
+                    if (self.isSome() && otherOption.isSome()) return None();
+                    return self.isSome() ? self : otherOption;
+                },
+            ),
+        );
+    }
+    /**
      * Makes `AsyncOption` awaitable by implementing the thenable interface.
      * This allows you to use `await` directly on `AsyncOption` instances.
      *
