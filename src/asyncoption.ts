@@ -180,7 +180,7 @@ export class AsyncOption<T> {
      * Converts an `AsyncOption<T>` to an `AsyncResult<T, E>` so that `None` is converted to
      * `Err(error)` and `Some` is converted to `Ok`.
      */
-    toResult<E>(error: E): AsyncResult<T, E> {
+    okOr<E>(error: E): AsyncResult<T, E> {
         return new AsyncResult(this.promise.then((option) => option.okOr(error)));
     }
 
