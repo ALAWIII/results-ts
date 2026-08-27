@@ -63,7 +63,7 @@ test('orElse() should work', async () => {
 
 test('toResult() should work', async () => {
     const result = new AsyncOption(None());
-    expect((await result.toResult('Blah').promise).unwrapErr()).toEqual('Blah');
+    expect((await result.okOr('Blah').promise).unwrapErr()).toEqual('Blah');
 });
 
 test('AsyncOption should be awaitable', async () => {
