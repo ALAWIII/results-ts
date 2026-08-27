@@ -108,3 +108,62 @@ test('AsyncResult should be awaitable', async () => {
     expect(result2.isErr()).toBe(true);
     expect(result2.unwrapErr()).toEqual('error');
 });
+describe('AsyncResult.inspect', () => {
+    test('inspect() should call the callback only for Ok values', async () => {
+        const goodResult = new AsyncResult(Ok(100));
+        const badResult = new AsyncResult(Err('error'));
+
+        let inspectedValue: number | undefined;
+        await goodResult.inspect((v) => {
+            inspectedValue = v;
+        });
+        expect(inspectedValue).toBe(100);
+
+        let badInspected = false;
+        await badResult.inspect(() => {
+            badInspected = true;
+        });
+        expect(badInspected).toBe(false);
+    });
+
+    test('inspect() should work with async callbacks', async () => {
+        const goodResult = new AsyncResult(Ok(42));
+
+        let inspectedValue: number | undefined;
+        await goodResult.inspect(async (v) => {
+            // Simulate async work
+            await new Promise((r) => setTimeout(r, 1));
+            inspectedValue = v;
+        });
+        expect(inspectedValue).toBe(42);
+    });
+});
+describe('AsyncResult.inspectErr', () => {
+    test('inspectErr() should call the callback only for Err values', async () => {
+        const goodResult = new AsyncResult(Ok(100));
+        const badResult = new AsyncResult(Err('error'));
+
+        let goodInspected = false;
+        await goodResult.inspectErr(() => {
+            goodInspected = true;
+        });
+        expect(goodInspected).toBe(false);
+
+        let inspectedError: string | undefined;
+        await badResult.inspectErr((e) => {
+            inspectedError = e;
+        });
+        expect(inspectedError).toBe('error');
+    });
+
+    test('inspectErr() should work with async callbacks', async () => {
+        const badResult = new AsyncResult(Err('async error'));
+
+        let inspectedError: string | undefined;
+        await badResult.inspectErr(async (e) => {
+            await new Promise((r) => setTimeout(r, 1));
+            inspectedError = e;
+        });
+        expect(inspectedError).toBe('async error');
+    });
+});
