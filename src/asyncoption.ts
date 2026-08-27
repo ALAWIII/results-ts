@@ -1,5 +1,5 @@
 import { AsyncResult } from './asyncresult.js';
-import { Option, Some } from './option.js';
+import { None, Option, Some } from './option.js';
 
 /**
  * An async-aware `Option` counterpart.
@@ -103,7 +103,37 @@ export class AsyncOption<T> {
             return Some(await mapper(option.value));
         });
     }
-
+    /**
+     * Returns `Some(value)` if this `AsyncOption` is `Some(value)` and `predicate(value)` is truthy;
+     * otherwise returns `None`.
+     *
+     * - `Some(v).filter(p)` → `Some(v)` if `p(v)` is true, else `None`
+     * - `None.filter(p)` → `None` (predicate is not called)
+     *
+     * The predicate may be synchronous or asynchronous.
+     *
+     * @example
+     * ```ts
+     * const some = Some(4).toAsyncOption();
+     * const none = None.toAsyncOption();
+     *
+     * await some.filter(v => v % 2 === 0); // Some(4)
+     * await some.filter(v => v > 10);      // None
+     * await none.filter(v => v > 0);       // None
+     *
+     * // Async predicate
+     * await some.filter(async v => {
+     *   await delay(10);
+     *   return v > 0;
+     * });               // Some(4)
+     * ```
+     */
+    filter(predicate: (value: T) => boolean | Promise<boolean>): AsyncOption<T> {
+        return this.thenInternal(async (option) => {
+            if (option.isNone()) return option;
+            return (await predicate(option.value)) ? option : None();
+        });
+    }
     /**
      * Returns the value from `other` if this `AsyncOption` contains `None`, otherwise returns self.
      *
