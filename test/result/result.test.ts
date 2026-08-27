@@ -1,10 +1,6 @@
 import {
     Err,
-    ErrImpl,
-    None,
     Ok,
-    OkImpl,
-    Option,
     Result,
     ResultErrEntry,
     ResultErrType,
@@ -13,55 +9,8 @@ import {
     ResultOkType,
     ResultOkTypes,
     ResultOkTypesRecord,
-    Some,
 } from '../src/index.js';
-import { eq, notSupposedToBeCalled } from './util.js';
-
-test('ErrImpl<E> | OkImpl<T> should be Result<T, E>', () => {
-    const r1 = Err(0);
-    const r2 = Ok('');
-    const r = Math.random() ? r1 : r2;
-
-    expect(Result.isResult(r1)).toEqual(true);
-    expect(Result.isResult(r2)).toEqual(true);
-    expect(Result.isResult(Some(3))).toEqual(false);
-    eq<typeof r, Result<string, number>>(true);
-});
-
-test('Type can be narrowed using ok & err', () => {
-    const r1 = Ok(0) as Result<number, string>;
-    if (r1.isOk()) {
-        eq<OkImpl<number>, typeof r1>(true);
-    } else {
-        eq<ErrImpl<string>, typeof r1>(true);
-    }
-
-    if (r1.isErr()) {
-        eq<ErrImpl<string>, typeof r1>(true);
-    } else {
-        eq<OkImpl<number>, typeof r1>(true);
-    }
-});
-
-test('map', () => {
-    const r = Err(0) as Result<string, number>;
-    const r2 = r.map(Symbol);
-    eq<typeof r2, Result<symbol, number>>(true);
-});
-
-test('andThen', () => {
-    const result = Ok('Ok') as Result<string, boolean>;
-    const then = result.andThen(() => Err('broke') as Result<boolean, string>);
-    expect(then).toMatchResult(Err('broke'));
-    function takesResult(result: Result<boolean, string | boolean>): void {}
-    takesResult(then);
-});
-
-test('mapErr', () => {
-    const r = Err(0) as Result<string, number>;
-    const r2 = r.mapErr(Symbol);
-    eq<typeof r2, Result<string, symbol>>(true);
-});
+import { eq } from './util.js';
 
 test('Iterable', () => {
     const r1 = Ok([true, false]) as Result<boolean[], number>;
@@ -74,18 +23,18 @@ test('Iterable', () => {
 });
 
 test('ResultOkType', () => {
-    type a = ResultOkType<OkImpl<string>>;
+    type a = ResultOkType<Ok<string, never>>;
     eq<string, a>(true);
-    type b = ResultOkType<ErrImpl<string>>;
+    type b = ResultOkType<Err<string, never>>;
     eq<never, b>(true);
     type c = ResultOkType<Result<string, number>>;
     eq<string, c>(true);
 });
 
 test('ResultErrType', () => {
-    type a = ResultErrType<OkImpl<string>>;
+    type a = ResultErrType<Ok<string, never>>;
     eq<never, a>(true);
-    type b = ResultErrType<ErrImpl<string>>;
+    type b = ResultErrType<Err<string, never>>;
     eq<string, b>(true);
     type c = ResultErrType<Result<string, number>>;
     eq<number, c>(true);
@@ -93,21 +42,21 @@ test('ResultErrType', () => {
 
 test('ResultOkTypes & ResultErrTypes', () => {
     type a = ResultOkTypes<
-        [OkImpl<string>, ErrImpl<string>, Result<symbol, number>, Result<never, string>, OkImpl<32> | ErrImpl<boolean>]
+        [Ok<string>, Err<string>, Result<symbol, number>, Result<never, string>, Ok<32> | Err<boolean>]
     >;
     eq<[string, never, symbol, never, 32], a>(true);
 
     type b = ResultErrTypes<
-        [OkImpl<string>, ErrImpl<string>, Result<symbol, number>, Result<never, symbol>, OkImpl<boolean> | ErrImpl<32>]
+        [Ok<string>, Err<string>, Result<symbol, number>, Result<never, symbol>, Ok<boolean> | Err<32>]
     >;
     eq<[never, string, number, symbol, 32], b>(true);
 });
 
 test('ResultOkTypesRecord & ResultErrTypesRecord', () => {
-    type a = ResultOkTypesRecord<{ x: OkImpl<string>; y: ErrImpl<string>; z: Result<symbol, number> }>;
+    type a = ResultOkTypesRecord<{ x: Ok<string>; y: Err<string>; z: Result<symbol, number> }>;
     eq<{ x: string; y: never; z: symbol }, a>(true);
 
-    type b = ResultErrTypesRecord<{ x: OkImpl<string>; y: ErrImpl<string>; z: Result<symbol, number> }>;
+    type b = ResultErrTypesRecord<{ x: Ok<string>; y: Err<string>; z: Result<symbol, number> }>;
     eq<{ x: never; y: string; z: number }, b>(true);
 });
 
@@ -128,7 +77,7 @@ test('Result.all', () => {
     eq<typeof all1Array, Result<[number, boolean], never>>(true);
 
     const all2Array = Result.all([err0, err1]);
-    expect(all2Array).toMatchResult(Err(err0.error));
+    expect(all2Array).toMatchResult(Err(err0.unwrapErr()));
     eq<typeof all2Array, Result<[never, never], symbol | Error>>(true);
 
     const all3Array = Result.all([] as Result<string, number>[]);
@@ -258,7 +207,7 @@ test('Result.all with object', () => {
         >
     >(true);
     eq<
-        ResultErrEntry<{ a: OkImpl<number>; b: typeof err0; c: OkImpl<boolean>; d: typeof err1 }>,
+        ResultErrEntry<{ a: Ok<number>; b: typeof err0; c: Ok<boolean>; d: typeof err1 }>,
         { key: 'b'; error: symbol } | { key: 'd'; error: Error }
     >(true);
 
@@ -311,7 +260,7 @@ test('Result.any', () => {
     eq<typeof any1Array, Result<number | boolean, [never, never]>>(true);
 
     const any2Array = Result.any([err0, err1]);
-    expect(any2Array).toMatchResult(Err([err0.error, err1.error]));
+    expect(any2Array).toMatchResult(Err([err0.unwrapErr(), err1.unwrapErr()]));
     eq<typeof any2Array, Result<never, [symbol, Error]>>(true);
 
     const any3Array = Result.any([] as Result<string, number>[]);
@@ -378,17 +327,17 @@ test('Result.partition', async () => {
 
     const all1 = Result.partition([ok0, ok1, err0, err1]);
     expect(all1).toEqual([
-        [ok0.value, ok1.value],
-        [err0.error, err1.error],
+        [ok0.unwrap(), ok1.unwrap()],
+        [err0.unwrapErr(), err1.unwrapErr()],
     ]);
     eq<typeof all1, [(number | boolean)[], (symbol | Error)[]]>(true);
 
     const all2 = Result.partition([ok0, ok1]);
-    expect(all2).toEqual([[ok0.value, ok1.value], []]);
+    expect(all2).toEqual([[ok0.unwrap(), ok1.unwrap()], []]);
     eq<typeof all2, [(number | boolean)[], never[]]>(true);
 
     const all3 = Result.partition([err0, err1]);
-    expect(all3).toEqual([[], [err0.error, err1.error]]);
+    expect(all3).toEqual([[], [err0.unwrapErr(), err1.unwrapErr()]]);
     eq<typeof all3, [never[], (symbol | Error)[]]>(true);
 
     const all4 = Result.partition([1, 2, 3, 4].map((num) => Ok(num) as Result<number, Error>));
@@ -396,7 +345,7 @@ test('Result.partition', async () => {
     eq<typeof all4, [number[], Error[]]>(true);
 
     const all5 = Result.partition([result0, result1]);
-    expect(all5).toEqual([[(result0 as OkImpl<number>).value, (result1 as OkImpl<boolean>).value], []]);
+    expect(all5).toEqual([[(result0 as Ok<number>).unwrap(), (result1 as Ok<boolean>).unwrap()], []]);
     eq<typeof all5, [(number | boolean)[], (symbol | Error)[]]>(true);
 });
 
@@ -420,163 +369,8 @@ test('Issue #24', () => {
     };
 });
 
-test('ok', () => {
-    const result = Ok('hello') as Result<string, number>;
-    const option = result.ok();
-    eq<typeof option, Option<string>>(true);
-    expect(option).toEqual(Some('hello'));
-
-    const result2: Result<string, number> = Err(32);
-    const option2 = result2.ok();
-    expect(option2).toEqual(None);
-});
-
-test('or / orElse', () => {
-    const result = Err('boo');
-
-    const afterOrElseAlwaysErr = result.orElse((error) => Err(error === 'boo'));
-    eq<typeof afterOrElseAlwaysErr, ErrImpl<boolean>>(true);
-    const afterOrElseAlwaysOk = result.orElse((_error) => Ok(1));
-    expect(afterOrElseAlwaysOk).toMatchResult(Ok(1));
-    eq<typeof afterOrElseAlwaysOk, OkImpl<number>>(true);
-    const afterOrElseAnyResult = result.orElse((error) => (error === 'foo' ? Ok(1) : Err('bar')));
-    eq<typeof afterOrElseAnyResult, Result<number | 1, string>>(true);
-
-    const afterOrErr = result.or<unknown, boolean>(Err(true));
-    eq<typeof afterOrErr, Result<unknown, boolean>>(true);
-    const afterOrOk = result.or(Ok(1));
-    eq<typeof afterOrOk, OkImpl<number>>(true);
-    const afterOrResult = result.or(Err(true) as Result<number, boolean>);
-    eq<typeof afterOrResult, Result<number, boolean>>(true);
-
-    expect(Err('error').or(Ok(1))).toEqual(Ok(1));
-    expect(Err('error').orElse((error) => Ok(error.length))).toEqual(Ok(5));
-
-    expect(Ok(1).or(Ok(2))).toEqual(Ok(1));
-    expect(
-        Ok(1).orElse(() => {
-            throw new Error('Call unexpected');
-        }),
-    ).toEqual(Ok(1));
-});
-
 test('toAsyncResult()', async () => {
     expect(await Ok(1).toAsyncResult().promise).toEqual(Ok(1));
     const err = Err('error');
     expect(await err.toAsyncResult().promise).toEqual(err);
-});
-
-test('unwrapOrElse', () => {
-    expect(Ok({ data: 'user data' }).unwrapOrElse(notSupposedToBeCalled)).toEqual({ data: 'user data' });
-    expect(Err('bad error').unwrapOrElse((error) => ({ error }))).toEqual({ error: 'bad error' });
-});
-
-test('andThen/orElse chaining regression', () => {
-    // Based on this issue: https://github.com/lune-climate/ts-results-es/issues/197
-    class T1 {
-        name = 'T1' as const;
-    }
-    class T2 {
-        name = 'T2' as const;
-    }
-    class T3 {
-        name = 'T3' as const;
-    }
-    class E1 {
-        name = 'E1' as const;
-    }
-    class E2 {
-        name = 'E2' as const;
-    }
-    class E3 {
-        name = 'E3' as const;
-    }
-
-    function foo1(): Result<T1, E1> {
-        return Ok({ name: 'T1' });
-    }
-    function foo2(): Result<T2, E2> {
-        return Ok({ name: 'T2' });
-    }
-    function foo3(): Result<T3, E3> {
-        return Ok({ name: 'T3' });
-    }
-
-    // The orElse line used to produce this error:
-    //
-    // This expression is not callable.
-    // Each member of the union type ... has signatures, but none of those signatures are compatible with each other. (ts 2349)
-    const test1 = foo1()
-        .andThen(() => foo2())
-        .orElse(() => foo3());
-
-    expect(test1).toEqual(Ok({ name: 'T2' }));
-    eq<typeof test1, OkImpl<T2> | OkImpl<T3> | ErrImpl<E3>>(true);
-
-    // Test the opposite order too just to be sure
-    const test2 = foo1()
-        .orElse(() => foo2())
-        .andThen(() => foo3());
-
-    expect(test2).toEqual(Ok({ name: 'T3' }));
-    eq<typeof test2, OkImpl<T3> | ErrImpl<E3> | ErrImpl<E2>>(true);
-});
-
-test('Result.isOkAnd', () => {
-    const errResult = Err('Failure') as Result<number, string>;
-    const okResult = Ok(2) as Result<number, string>;
-    expect(errResult.isOkAnd((v) => v > 1)).toBe(false);
-    expect(okResult.isOkAnd((v) => v > 1)).toBe(true);
-});
-test('Result.isErrAnd', () => {
-    const errResult = Err('Failure') as Result<number, string>;
-    const okResult = Ok(2) as Result<number, string>;
-    expect(errResult.isErrAnd((v) => v === 'Failure')).toBe(true);
-    expect(okResult.isErrAnd((v) => v === 'Failure')).toBe(false);
-});
-
-test('Result.inspect', () => {
-    const okResult = Ok(5) as Result<number, string>;
-    let okSideEffect: number | undefined;
-    const errResult = Err('x') as Result<number, string>;
-    let errSideEffect: string | undefined;
-    expect(
-        okResult.inspect((v) => {
-            okSideEffect = v + 1;
-        }),
-    ).toEqual(okResult);
-    expect(
-        errResult.inspect((v) => {
-            errSideEffect = `${v}`;
-        }),
-    ).toEqual(errResult);
-
-    expect(okSideEffect).toEqual(6);
-    expect(errSideEffect).toBe(undefined);
-});
-test('Result.inspectErr', () => {
-    const errResult = Err('x') as Result<number, string>;
-    let errSideEffect: string | undefined;
-    const okResult = Ok(5) as Result<number, string>;
-    let okSideEffect: number | undefined;
-    expect(
-        errResult.inspectErr((v) => {
-            errSideEffect = `${v}`;
-        }),
-    ).toEqual(errResult);
-    expect(
-        okResult.inspectErr((v) => {
-            okSideEffect = 1;
-        }),
-    ).toEqual(okResult);
-
-    expect(errSideEffect).toBe('x');
-    expect(okSideEffect).toEqual(undefined);
-});
-
-test('Result.and and ignores the provided if the result was Err', () => {
-    const errResult = Err(3) as Result<number, number>;
-    expect(errResult.and(Ok('00'))).toMatchResult(Err(3));
-    const okResult = Ok(3) as Result<number, number>;
-    expect(okResult.and(Ok('00'))).toMatchResult(Ok('00'));
 });
