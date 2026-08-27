@@ -171,6 +171,13 @@ export class AsyncResult<T, E> {
     ok(): AsyncOption<T> {
         return new AsyncOption(this.promise.then((result) => result.ok()));
     }
+    /**
+     * Converts from `AsyncResult<T, E>` to `AsyncOption<E>` so that `Ok` is converted to `None`
+     * and `Err` is converted to `Some`.
+     */
+    err(): AsyncOption<E> {
+        return new AsyncOption(this.promise.then((result) => result.err()));
+    }
 
     /**
      * Makes `AsyncResult` awaitable by implementing the thenable interface.
