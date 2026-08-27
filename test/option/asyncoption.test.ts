@@ -1,4 +1,4 @@
-import { AsyncOption, None, Some } from '../src/index.js';
+import { AsyncOption, None, Some } from '../../src/index.js';
 
 test('the constructor should work', async () => {
     const option = new AsyncOption(Some(1));
