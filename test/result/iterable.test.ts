@@ -1,4 +1,4 @@
-import { expect_never } from 'util';
+import { expect_never } from '../util';
 import { Err, Ok } from '../../src';
 
 test('Ok.iterable', () => {
