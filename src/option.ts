@@ -4,6 +4,14 @@ import { Result, Ok, Err } from './result.js';
 //===============================
 type IsNever<T> = [T] extends [never] ? true : false;
 //=========== used on transpose.
+/**
+ * Converts a `Result` of an `Option`-compatible value into an `Option` of a `Result`,
+ * i.e. `Result<T, E>` → `Result<Option<T>, E>`, pushing the "optionality" inward.
+ *
+ * - if `T` is `never`, return `Result<Option<T>, never>` (nothing to unwrap, so `E` collapses to `never`).
+ * - if `T` is `Result<infer U, infer E>`, return `Result<Option<U>, E>` — wrap the inner success value `U` in `Option`, keep the error `E` untouched.
+ * - otherwise (`T` isn't `never` and isn't a `Result`), return `Result<Option<T>, never>` — treat `T` itself as the value to wrap in `Option`, with no error type.
+ */
 type TransposeOption<T> =
     IsNever<T> extends false
         ? T extends Result<infer U, infer E>
@@ -12,7 +20,14 @@ type TransposeOption<T> =
         : Result<Option<T>, never>;
 
 //====== used on flatten and collapse
-
+/**
+ * Full flatten (no depth bound) — used when no depth arg is given.
+ *
+ * - if `T` is `never` or is not `Option<InnerU>`, then return `Option<T>`.
+ * - if `T` is `Option<infer U>`, then:
+ *      - if `U` is `never`, return `Option<U>`.
+ *      - otherwise: call `DeepFlatten<U>` recursively.
+ */
 type DeepFlatten<T> =
     IsNever<T> extends false
         ? T extends Option<infer U>
@@ -24,6 +39,16 @@ type DeepFlatten<T> =
 type CollapseOption<T> = DeepFlatten<T>;
 //======
 type ReachedDepthCondintion<L extends number, D extends number> = L extends D ? true : false;
+/**
+ * Bounded flatten — used when a depth arg `D` is given.
+ * Recurses at most `D` times, tracking progress via the tuple `Acc`
+ * (`Acc['length']` is the current depth reached so far).
+ *
+ * - if `Acc['length']` equals `D` (depth limit reached), stop and return `Option<T>` as-is, regardless of whether `T` is still a nested `Option`.
+ * - otherwise, if `T` is `never`, return `Option<T>`.
+ * - otherwise, if `T` is `Option<infer U>`, recurse with `DeepFlattenN<U, D, [...Acc, unknown]>` — unlike `DeepFlatten`, there's no separate check for `U` being `never` before recursing; that's caught on the *next* call via the `IsNever<T>` branch.
+ * - otherwise (`T` isn't `never` and isn't an `Option`), return `Option<T>` — flattening is done.
+ */
 type DeepFlattenN<T, D extends number, Acc extends unknown[] = []> =
     ReachedDepthCondintion<Acc['length'], D> extends false
         ? IsNever<T> extends false
@@ -37,6 +62,12 @@ type DeepFlattenN<T, D extends number, Acc extends unknown[] = []> =
           Option<T>;
 
 type IsNonPositive<D extends number> = `${D}` extends `-${string}` ? true : D extends 0 ? true : false;
+/**
+ * Depth-bounded entry point — used when a depth arg `D` is given.
+ *
+ * - if `D` is non-positive (zero or negative, per `IsNonPositive`), skip flattening entirely and return `Option<T>` unchanged (depth `0` or less means "don't unwrap anything").
+ * - otherwise, delegate to `DeepFlattenN<T, D>`, which flattens up to `D` levels of nested `Option`s deep, starting the accumulator `Acc` at `[]` (depth `0`).
+ */
 type CollapseOptionN<T, D extends number> = IsNonPositive<D> extends true ? Option<T> : DeepFlattenN<T, D>;
 //=================================================
 abstract class BaseOption<T> implements Iterable<T> {
@@ -97,7 +128,7 @@ abstract class BaseOption<T> implements Iterable<T> {
     abstract unwrap(): T;
 
     /**
-     * Returns the contained `Some` value or a provided default.
+     * Returns the contained `Some` value or a provided `val` as default.
      *
      *  (This is the `unwrap_or` in rust)
      */
@@ -109,7 +140,7 @@ abstract class BaseOption<T> implements Iterable<T> {
      * The function is called at most one time, only if needed.
      *
      * @example
-     * ```
+     * ```typescript
      * Some('OK').unwrapOrElse(
      *     () => { console.log('Called'); return 'UGH'; }
      * ) // => 'OK', nothing printed
@@ -159,9 +190,10 @@ abstract class BaseOption<T> implements Iterable<T> {
      * call try `orElse()` instead – it evaluates the parameter lazily.
      *
      * @example
-     *
+     *```typescript
      * Some(1).or(Some(2)) // => Some(1)
      * None.or(Some(2)) // => Some(2)
+     * ```
      */
     abstract or(other: Option<T>): Option<T>;
 
@@ -172,9 +204,10 @@ abstract class BaseOption<T> implements Iterable<T> {
      * `other()` is called *only* when needed.
      *
      * @example
-     *
+     *```typescript
      * Some(1).orElse(() => Some(2)) // => Some(1)
      * None.orElse(() => Some(2)) // => Some(2)
+     * ```
      */
     abstract orElse(other: () => Option<T>): Option<T>;
     /**
@@ -280,19 +313,20 @@ abstract class BaseOption<T> implements Iterable<T> {
     /**
      * Transforms the `Option<T>` into a `Result<T, E>`, mapping `Some(v)` to `Ok(v)` and `None` to `Err(err)`.
      * @example
+     * ```typescript
      * Some(4).okOr('err'); // evaluates to Ok(4).
      * None.okOr('your error'); // evaluates to Err('your error').
+     * ```
      */
     abstract okOr<E>(err: E): Result<T, E>;
     /**
      * Transforms the `Option<T>` into a `Result<T, E>`, mapping `Some(v)` to `Ok(v)` and `None` to `Err(err())`.
      * @example
+     * ```typescript
      * const errFun = ()=> 'your error';
-     *
      * const some = Some(6).okOrElse(errFun); // evaluates to Ok(6)
-     *
      * const none = None.okOrElse(errFun); // evaluates to Err('err')
-     *
+     * ```
      */
     abstract okOrElse<E>(err: () => E): Result<T, E>;
     /**
