@@ -2,12 +2,17 @@ import { toString } from './utils.js';
 import { Option, None, Some } from './option.js';
 import { AsyncResult } from './asyncresult.js';
 
+/**
+ * checks if a given value is never.
+ */
+type IsNever<V> = [V] extends [never] ? true : false;
+
 //=================================== transpose helpers
 /**
  * used in transpose implementation.
- * - if `T` is `Some<U>` if yes then if `E` is provided return `Result<U, E>` otherwise return `OkImpl<U>`.
- * - if `T` is `None` return `None`
- * - otherwise: wrap `T` with `Some<OkImpl<U>>` or `Result<U,E>` and return it.
+ * - if `T` is `never` then wrap with `Option<Result<T, E>>` and return directly.
+ * - if `T` is `Option<U>` then wrap with `Option<Result<U,E>>` and return directly.
+ * - if `T` is not an `Option` wrap with `Option<Result<T,E>>` and return it.
  */
 type TransposeResult<T, E> =
     IsNever<T> extends false
@@ -16,16 +21,13 @@ type TransposeResult<T, E> =
             : Option<Result<T, E>>
         : Option<Result<T, E>>;
 //========================= flatten related types.
-
 /**
- * checks if a given value is never.
- */
-type IsNever<V> = [V] extends [never] ? true : false;
-
-//===========================
-/**
- *  Full flatten (no depth bound) — used when no depth arg is given
-
+ *  Full flatten (no depth bound) — used when no depth arg is given.
+ *
+ * - if `T` is `never` or is not `Result<InnerT,InnerE>`  then return `Result<T,E>`.
+ * - if `T` is `Result<infer InnerT, infer InnerE>`, then:
+ *      - if `InnerT` is `never` return `Result<InnerT, InnerE>`.
+ *      - otherwise: call `DeepFlatten<InnerT, InnerE>` recursively.
  */
 type DeepFlatten<T, E> =
     IsNever<T> extends false
@@ -40,8 +42,26 @@ type DeepFlatten<T, E> =
           Result<T, E>;
 type CollapseResult<T, E> = DeepFlatten<T, E>;
 
-// Flatten up to depth D while maintaining pristine Result structures
+//=== Flatten up to depth D while maintaining pristine Result structures
+/**
+ * Checks whether the current recursion depth `L` has reached the target depth `D`.
+ *
+ * - Returns `true` if `L extends D` (i.e. `L` and `D` resolve to the same literal number).
+ * - Returns `false` otherwise.
+ */
+
 type ReachedDepthCondintion<L extends number, D extends number> = L extends D ? true : false;
+/**
+ * Bounded flatten — used when a depth arg `D` is given.
+ * Recurses at most `D` times, tracking progress via the tuple `Acc`
+ * (each recursive call appends one `unknown` element, so `Acc['length']`
+ * is the current depth reached so far).
+ *
+ * - if `Acc['length']` equals `D` (depth limit reached), stop and return `Result<T, E>` as-is, regardless of whether `T` is still a nested `Result`.
+ * - otherwise, if `T` is `never`, return `Result<T, E>`.
+ * - otherwise, if `T` is `Result<infer InnerT, infer InnerE>`, recurse with `DeepFlattenN<InnerT, InnerE, D, [...Acc, unknown]>` — note this differs from `DeepFlatten`: there's no separate check for `InnerT` being `never` before recursing; that check happens on the *next* call via the `IsNever<T>` branch.
+ * - otherwise (`T` isn't `never` and isn't a `Result`), return `Result<T, E>` — flattening is done.
+ */
 type DeepFlattenN<T, E, D extends number, Acc extends unknown[] = []> =
     ReachedDepthCondintion<Acc['length'], D> extends false
         ? IsNever<T> extends false
@@ -53,8 +73,20 @@ type DeepFlattenN<T, E, D extends number, Acc extends unknown[] = []> =
               Result<T, E>
         : // if the depth was reached
           Result<T, E>;
-
+/**
+ * Checks whether a numeric literal type `D` is zero or negative.
+ *
+ * - Converts `D` to its string-literal form and checks if it starts with `-` (negative), returning `true` if so.
+ * - Otherwise, checks if `D extends 0`, returning `true` if so.
+ * - Returns `false` for any positive number.
+ */
 type IsNonPositive<D extends number> = `${D}` extends `-${string}` ? true : D extends 0 ? true : false;
+/**
+ * Depth-bounded entry point — used when a depth arg `D` is given.
+ *
+ * - if `D` is non-positive (zero or negative, per `IsNonPositive`), skip flattening entirely and return `Result<T, E>` unchanged (depth `0` or less means "don't unwrap anything").
+ * - otherwise, delegate to `DeepFlattenN<T, E, D>`, which flattens up to `D` levels of nested `Result`s deep, starting the accumulator `Acc` at `[]` (depth `0`).
+ */
 type CollapseResultN<T, E, D extends number> = IsNonPositive<D> extends true ? Result<T, E> : DeepFlattenN<T, E, D>;
 
 //=======================================================
@@ -64,14 +96,14 @@ abstract class BaseResult<T, E> implements Iterable<T> {
     abstract isOk(): this is OkImpl<T, E>;
 
     /**
-     * Returns true if the result is Ok and the value inside of it matches a predicate
+     * Returns `true` if the result is `Ok` and the value inside of it matches a predicate
      */
     abstract isOkAnd(f: (v: T) => boolean): boolean;
-    /** `true` when the result is Err */
+    /** `true` when the result is `Err` */
     abstract isErr(): this is ErrImpl<E, T>;
 
     /**
-     * Returns true if the result is Err and the value inside of it matches a predicate
+     * Returns `true` if the result is `Err` and the value inside of it matches a predicate
      */
     abstract isErrAnd(f: (e: E) => boolean): boolean;
     /**
@@ -94,7 +126,7 @@ abstract class BaseResult<T, E> implements Iterable<T> {
      * let badResult = Err(new Error('something went wrong'));
      *
      * goodResult.expect('goodResult should be a number'); // 1
-     * badResult.expect('badResult should be a number'); // throws Error("badResult should be a number - Error: something went wrong")
+     * badResult.expect('badResult should be a number'); // throws Error("badResult should be a number: something went wrong")
      * ```
      */
     abstract expect(msg: string): T;
@@ -108,8 +140,8 @@ abstract class BaseResult<T, E> implements Iterable<T> {
      * let goodResult = Ok(1);
      * let badResult = Err(new Error('something went wrong'));
      *
-     * goodResult.expectErr('goodResult should not be a number'); // throws Error("goodResult should not be a number")
-     * badResult.expectErr('badResult should not be a number'); // new Error('something went wrong')
+     * goodResult.expectErr('goodResult should not be a number'); // throws Error("goodResult should not be a number: 1")
+     * badResult.expectErr('badResult should not be a number'); // returns Error('something went wrong')
      * ```
      */
     abstract expectErr(msg: string): E;
@@ -154,7 +186,7 @@ abstract class BaseResult<T, E> implements Iterable<T> {
      * let goodResult = new Ok(1);
      * let badResult = new Err('something went wrong');
      *
-     * goodResult.unwrapErr(); // throws an exception
+     * goodResult.unwrapErr(); // throws 1
      * badResult.unwrapErr(); // returns 'something went wrong'
      * ```
      */
@@ -408,11 +440,8 @@ abstract class BaseResult<T, E> implements Iterable<T> {
      * When a Result contains another Result as its value, `flatten()` extracts the inner Result,
      * effectively collapsing `Result<Result<T, E>, E>` into `Result<T, E>`.
      *
-     * **Type Parameters:**
-     * - `U = T`: The success type of the inner Result if it exists
-     * - `E2 = E`: The error type of the inner Result if it exists
      *
-     * **Returns:** `Result<U | T, E | E2>`
+     * **Returns:** `Result<T, E>`
      * - If `Ok` contains another `Result`, returns the inner Result directly
      * - If `Ok` contains a non-Result value `T`, returns `Ok<T>`
      * - If `Err`, returns itself unchanged (Err is terminal)
@@ -439,6 +468,7 @@ abstract class BaseResult<T, E> implements Iterable<T> {
      * const result = Err('failure').flatten();
      * console.log(result.unwrapErr()); // 'failure'
      *
+     * @see {@link collapse} for flatten multiple nested layers of `Result<Result<Result<T>>>` in one operation.
      * @see {@link andThen} for chaining operations without flattening
      * @see {@link map} for transforming the success value
      */
@@ -451,14 +481,11 @@ abstract class BaseResult<T, E> implements Iterable<T> {
      * Unlike `flatten()` which only collapses one level, `collapse()` can flatten
      * multiple nested layers of `Result<Result<Result<T>>>` in one operation.
      *
-     * **Type Parameters:**
-     * - `U = T`: The success type of inner Results
-     * - `E2 = E`: The error type of inner Results
      *
      * **Parameters:**
      * - `depth: number` (default: `Infinity`): Maximum number of levels to flatten
      *
-     * **Returns:** `Result<U | T, E | E2>`
+     * **Returns:** `Result<T, E>`
      * - Flattens `depth` levels of nested Results
      * - Stops early if a non-Result value or `Err` is encountered
      * - Depth of `0` returns the Result unchanged
@@ -517,9 +544,6 @@ abstract class BaseResult<T, E> implements Iterable<T> {
      * For `Ok` variants that do not contain an `Option`, the operation is idempotent,
      * returning `Some(Ok(originalValue))`.
      *
-     * @typeparam T2 - The inner success type extracted from `Option<T>`. If `T` is not an `Option`,
-     *                 `T2` defaults to `T` to preserve idempotency.
-     * @typeparam E2 - The error type, defaulting to `E`.
      * @returns An `Option` containing a `Result`:
      *          - `Some(Ok(value))` if the original was `Ok(Some(value))`
      *          - `None` if the original was `Ok(None)`
