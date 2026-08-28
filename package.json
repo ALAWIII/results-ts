@@ -1,6 +1,6 @@
 {
   "name": "@allawiii/results-ts",
-  "version": "8.0.0",
+  "version": "8.0.1",
   "description": "A complete TypeScript implementation of Rust's Result and Option objects.",
   "author": "ALAWIII",
   "homepage": "https://github.com/ALAWIII/results-ts",
@@ -26,14 +26,17 @@
   },
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
+  "types": "dist/esm/index.d.ts",
   "exports": {
     ".": {
       "require": "./dist/cjs/index.js",
-      "import": "./dist/esm/index.js"
+      "import": "./dist/esm/index.js",
+      "types": "./dist/esm/index.d.ts"
     },
     "./rxjs-operators": {
       "require": "./dist/cjs/rxjs-operators/index.js",
-      "import": "./dist/esm/rxjs-operators/index.js"
+      "import": "./dist/esm/rxjs-operators/index.js",
+      "types": "./dist/esm/rxjs-operators/index.d.ts"
     }
   },
   "files": [
