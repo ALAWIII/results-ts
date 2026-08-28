@@ -1098,16 +1098,20 @@ export namespace Result {
      *
      * @example
      * ```typescript
-     * await Result.wrapAsync(() => fetch('/api/data').then(r => r.json())) // Ok(data) or Err(error), type: Result<any, unknown>
+     * await Result.wrapAsync(() => fetch('/api/data').then(r => r.json()))
+     * // Ok(data) or Err(error), type: AsyncResult<any, unknown>
      * ```
      */
-    export function wrapAsync<T, E = unknown>(op: () => Promise<T>): Promise<Result<T, E>> {
+    export function wrapAsync<T, E = unknown>(op: () => Promise<T>): AsyncResult<T, E> {
         try {
-            return op()
+            const p = op()
                 .then((val) => Ok(val))
-                .catch((e) => Err(e));
+                .catch((e) => Err(e)) as Promise<Result<T, E>>;
+
+            return new AsyncResult(p);
         } catch (e) {
-            return Promise.resolve(Err(e as E));
+            const p = Promise.resolve(Err(e as E)) as Promise<Result<T, E>>;
+            return new AsyncResult(p);
         }
     }
 
